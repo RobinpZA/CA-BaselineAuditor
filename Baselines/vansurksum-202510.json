@@ -1,0 +1,2113 @@
+{
+  "version": "2025-10",
+  "source": "Kenneth van Surksum — CA Baseline October 2025",
+  "url": "https://yourecloudninja.com/conditional-access-baseline/",
+  "totalPolicies": 50,
+  "policies": [
+    {
+      "id": "CAP001",
+      "name": "Block Legacy Authentication for All users when OtherClients",
+      "fullName": "CAP001-All Block Legacy Authentication for All users when OtherClients-v1.0",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "Blocks legacy authentication protocols that bypass Conditional Access and MFA. Deploy this policy first as a foundation.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "other"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "legacy",
+        "block",
+        "other"
+      ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "CAP002",
+      "name": "Block Exchange ActiveSync Clients for All users",
+      "fullName": "CAP002-All Block Exchange ActiveSync Clients for All users-v1.1",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "Blocks Exchange ActiveSync connections which use legacy authentication.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "exchangeActiveSync"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "activesync",
+        "exchange",
+        "block"
+      ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "CAP003",
+      "name": "Block device code authentication flow",
+      "fullName": "CAP003-All Block device code authentication flow-v1.0",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "Blocks device code flow which can be abused in phishing attacks to authenticate on behalf of users.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "authenticationFlows": [
+            "deviceCodeFlow"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "device code",
+        "block",
+        "authentication flow"
+      ],
+      "policyIntent": "auth-flow-block"
+    },
+    {
+      "id": "CAP004",
+      "name": "Block authentication transfer",
+      "fullName": "CAP004-All Block authentication transfer-v1.0",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "Blocks authentication transfer flow to prevent token theft via companion app attacks.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "authenticationFlows": [
+            "authenticationTransfer"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "authentication transfer",
+        "block"
+      ],
+      "policyIntent": "auth-flow-block"
+    },
+    {
+      "id": "CAD001",
+      "name": "Grant macOS access for All users when Modern Auth Clients and Compliant",
+      "fullName": "CAD001-O365 Grant macOS access for All users when Modern Auth Clients and Compliant-v1.1",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Requires macOS devices to be compliant to access Office 365 applications via modern auth clients.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [
+        "macOS"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "macOS"
+          ]
+        }
+      },
+      "keywords": [
+        "macos",
+        "compliant",
+        "office 365"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD002",
+      "name": "Grant Windows access for All users when Modern Auth Clients and Compliant",
+      "fullName": "CAD002-O365 Grant Windows access for All users when Modern Auth Clients and Compliant-v1.1",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Requires Windows devices to be compliant or Hybrid Azure AD joined to access Office 365.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [
+        "Windows"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice",
+            "domainJoinedDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "windows"
+          ]
+        }
+      },
+      "keywords": [
+        "windows",
+        "compliant",
+        "hybrid",
+        "office 365"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD003",
+      "name": "Grant iOS and Android access for All users when Modern Auth Clients and AppProPol or Compliant",
+      "fullName": "CAD003-O365 Grant iOS and Android access for All users when Modern Auth Clients and AppProPol or Compliant-v1.3",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Requires iOS and Android devices to use approved apps with app protection policy or be compliant.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance",
+        "AppProtection"
+      ],
+      "relevantPlatforms": [
+        "iOS",
+        "Android"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice",
+            "approvedApplication"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "iOS",
+            "android"
+          ]
+        }
+      },
+      "keywords": [
+        "ios",
+        "android",
+        "compliant",
+        "app protection",
+        "office 365"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD004",
+      "name": "Grant Browser access for All users when Browser and Compliant",
+      "fullName": "CAD004-All Grant Browser access for All users when Browser and Compliant-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Requires device compliance for browser-based access to all applications.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "browser",
+        "compliant",
+        "all applications"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD005",
+      "name": "Block access for unsupported device platforms for All users when Modern Auth Clients",
+      "fullName": "CAD005-O365 Block access for unsupported device platforms for All users when Modern Auth Clients-v1.1",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Blocks access from unsupported or unknown device platforms to Office 365.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "platforms": {
+          "excludePlatforms": [
+            "windows",
+            "iOS",
+            "android",
+            "macOS",
+            "linux"
+          ]
+        }
+      },
+      "keywords": [
+        "unsupported",
+        "block",
+        "platform",
+        "office 365"
+      ],
+      "policyIntent": "platform-block"
+    },
+    {
+      "id": "CAD006",
+      "name": "Session block download on unmanaged device for All users when Browser and Modern App Clients and Non-Compliant",
+      "fullName": "CAD006-O365 Session block download on unmanaged device for All users when Browser and Modern App Clients and Non-Compliant-v1.5",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Uses session controls to block file downloads from unmanaged or non-compliant devices accessing Office 365.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "sessionControls": {
+          "applicationEnforcedRestrictions": true
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "grantControls": {}
+      },
+      "keywords": [
+        "download",
+        "block",
+        "unmanaged",
+        "session",
+        "non-compliant"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAD007",
+      "name": "Session set Sign-in Frequency for Apps for All users when Modern Auth Clients and Non-Compliant",
+      "fullName": "CAD007-O365 Session set Sign-in Frequency for Apps for All users when Modern Auth Clients and Non-Compliant-v1.2",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Sets sign-in frequency for non-compliant devices accessing Office 365 desktop clients.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "sessionControls": {
+          "signInFrequency": true
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        }
+      },
+      "keywords": [
+        "sign-in frequency",
+        "non-compliant",
+        "office 365",
+        "session"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAD008",
+      "name": "Session set Sign-in Frequency for All users when Browser and Non-Compliant",
+      "fullName": "CAD008-All Session set Sign-in Frequency for All users when Browser and Non-Compliant-v1.1",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Sets sign-in frequency for browser sessions on non-compliant devices.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "sessionControls": {
+          "signInFrequency": true
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "sign-in frequency",
+        "browser",
+        "non-compliant",
+        "session"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAD009",
+      "name": "Session disable browser persistence for All users when Browser and Non-Compliant",
+      "fullName": "CAD009-All Session disable browser persistence for All users when Browser and Non-Compliant-v1.2",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Disables persistent browser sessions on non-compliant devices to force re-authentication.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "sessionControls": {
+          "persistentBrowser": {
+            "mode": "never"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "persistent browser",
+        "disable",
+        "non-compliant",
+        "session"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAD010",
+      "name": "Require MFA for device join or registration when Browser and Modern Auth Clients",
+      "fullName": "CAD010-RJD Require MFA for device join or registration when Browser and Modern Auth Clients-v1.1",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Requires MFA before a device can be registered or joined to Entra ID, preventing unauthorized device registration.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeUserActions": [
+            "urn:user:registerdevice"
+          ]
+        }
+      },
+      "keywords": [
+        "device join",
+        "registration",
+        "mfa",
+        "register"
+      ],
+      "policyIntent": "registration-security"
+    },
+    {
+      "id": "CAD011",
+      "name": "Grant Linux access for All users when Modern Auth Clients and Compliant",
+      "fullName": "CAD011-O365 Grant Linux access for All users when Modern Auth Clients and Compliant-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Requires Linux devices to be compliant to access Office 365.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [
+        "Linux"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "linux"
+          ]
+        }
+      },
+      "keywords": [
+        "linux",
+        "compliant",
+        "office 365"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD012",
+      "name": "Grant access for Admin users when Browser and Modern Auth Clients and Compliant",
+      "fullName": "CAD012-All Grant access for Admin users when Browser and Modern Auth Clients and Compliant-v1.1",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Requires administrators to use compliant or Hybrid Azure AD joined devices for all applications.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice",
+            "domainJoinedDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "admin",
+        "compliant",
+        "hybrid",
+        "all applications"
+      ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "CAD013",
+      "name": "Block access for Admin users when Mobile Platforms",
+      "fullName": "CAD013-All Block access for Admin users when Mobile Platforms-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Blocks administrator access from mobile device platforms (iOS/Android).",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [
+        "iOS",
+        "Android"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        },
+        "platforms": {
+          "includePlatforms": [
+            "iOS",
+            "android"
+          ]
+        }
+      },
+      "keywords": [
+        "admin",
+        "block",
+        "mobile",
+        "ios",
+        "android"
+      ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "CAD014",
+      "name": "Require App Protection Policy for Edge on Windows for All users when Browser and Non-Compliant",
+      "fullName": "CAD014-O365 Require App Protection Policy for Edge on Windows for All users when Browser and Non-Compliant-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Requires app protection policy for Microsoft Edge browser on Windows for non-compliant devices.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "AppProtection"
+      ],
+      "relevantPlatforms": [
+        "Windows"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "approvedApplication"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "Office365"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "windows"
+          ]
+        }
+      },
+      "keywords": [
+        "app protection",
+        "edge",
+        "browser",
+        "windows"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD015",
+      "name": "Grant access for All users when Browser and Modern Auth Clients and Compliant on Windows and macOS",
+      "fullName": "CAD015-All Grant access for All users when Browser and Modern Auth Clients and Compliant on Windows and macOS-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Requires compliant or Hybrid Azure AD joined Windows and macOS devices for browser and desktop client access to all applications.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [
+        "Windows",
+        "macOS"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice",
+            "domainJoinedDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "windows",
+            "macOS"
+          ]
+        }
+      },
+      "keywords": [
+        "compliant",
+        "windows",
+        "macos",
+        "all applications",
+        "browser"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD016",
+      "name": "Require token protection for desktop sessions on Windows",
+      "fullName": "CAD016-All Require token protection for desktop sessions on Windows-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Enforces token protection (token binding) for Windows desktop sessions to prevent token theft and replay attacks.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "TokenProtection"
+      ],
+      "relevantPlatforms": [
+        "Windows"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "sessionControls": {
+          "secureSignInSession": {
+            "tokenProtection": true
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "windows"
+          ]
+        }
+      },
+      "keywords": [
+        "token protection",
+        "binding",
+        "windows",
+        "desktop"
+      ],
+      "policyIntent": "token-protection"
+    },
+    {
+      "id": "CAD017",
+      "name": "Grant Windows 365 Cloud PC access for All users when Compliant",
+      "fullName": "CAD017-CloudPC Grant Windows 365 Cloud PC access for All users when Compliant-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Requires compliant devices to access Windows 365 Cloud PC workloads.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune",
+        "CloudPC"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "Windows365"
+          ]
+        }
+      },
+      "keywords": [
+        "cloud pc",
+        "windows 365",
+        "compliant"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CAD018",
+      "name": "Session controls for Windows 365 Cloud PC access for All users",
+      "fullName": "CAD018-CloudPC Session controls for Windows 365 Cloud PC access for All users-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Applies session controls (sign-in frequency, persistent browser) to Windows 365 Cloud PC sessions.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune",
+        "CloudPC"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "sessionControls": {
+          "signInFrequency": true
+        },
+        "applications": {
+          "includeApplications": [
+            "Windows365"
+          ]
+        }
+      },
+      "keywords": [
+        "cloud pc",
+        "windows 365",
+        "session",
+        "sign-in frequency"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAD019",
+      "name": "Require compliant network for All users when Browser and Modern Auth Clients",
+      "fullName": "CAD019-All Require compliant network for All users when Browser and Modern Auth Clients-v1.0",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "Requires devices to be on a compliant network (Global Secure Access) for access.",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "GlobalSecureAccess"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "includeLocations": [
+              "compliantNetwork"
+            ]
+          }
+        }
+      },
+      "keywords": [
+        "compliant network",
+        "global secure access"
+      ],
+      "policyIntent": "compliant-network"
+    },
+    {
+      "id": "CAL001",
+      "name": "Block access from high-risk countries for All users",
+      "fullName": "CAL001-All Block access from high-risk countries for All users when Browser and Modern Auth Clients-v1.0",
+      "category": "Location",
+      "priority": "Should Have",
+      "description": "Blocks access from countries/regions identified as high risk. Requires named locations to be configured.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "includeLocations": true
+          }
+        }
+      },
+      "keywords": [
+        "country",
+        "block",
+        "location",
+        "high risk"
+      ],
+      "policyIntent": "location-based"
+    },
+    {
+      "id": "CAL002",
+      "name": "Require MFA registration from trusted locations only for All users when Browser and Modern Auth Clients",
+      "fullName": "CAL002-RSI Require MFA registration from trusted locations only for All users when Browser and Modern Auth Clients-v1.4",
+      "category": "Location",
+      "priority": "Must Have",
+      "description": "Requires MFA for security information registration from non-trusted networks to prevent MFA registration abuse.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeUserActions": [
+            "urn:user:registersecurityinfo"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "excludeLocations": [
+              "AllTrusted"
+            ]
+          }
+        }
+      },
+      "keywords": [
+        "mfa registration",
+        "trusted location",
+        "security info"
+      ],
+      "policyIntent": "registration-security"
+    },
+    {
+      "id": "CAL003",
+      "name": "Block Access for Specified Service Accounts except from Provided Trusted Locations",
+      "fullName": "CAL003-All Block Access for Specified Service Accounts except from Provided Trusted Locations when Browser and Modern Auth Clients-v1.1",
+      "category": "Location",
+      "priority": "Should Have",
+      "description": "Restricts service accounts to only authenticate from trusted locations.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "excludeLocations": true
+          }
+        },
+        "users": {
+          "includeGroups": true
+        }
+      },
+      "keywords": [
+        "service account",
+        "trusted location",
+        "block"
+      ],
+      "policyIntent": "location-based"
+    },
+    {
+      "id": "CAL004",
+      "name": "Block access for Admins from non-trusted locations",
+      "fullName": "CAL004-All Block access for Admins from non-trusted locations when Browser and Modern Auth Clients-v1.2",
+      "category": "Location",
+      "priority": "Should Have",
+      "description": "Blocks administrator access from non-trusted locations to reduce risk of compromised admin credentials being used remotely.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "excludeLocations": [
+              "AllTrusted"
+            ]
+          }
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "admin",
+        "block",
+        "non-trusted",
+        "location"
+      ],
+      "policyIntent": "location-based"
+    },
+    {
+      "id": "CAL005",
+      "name": "Require MFA from non-trusted locations for All users",
+      "fullName": "CAL005-All Require MFA from non-trusted locations for All users when Browser and Modern Auth Clients-v1.0",
+      "category": "Location",
+      "priority": "Could Have",
+      "description": "Requires MFA when accessing from outside trusted locations.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "excludeLocations": [
+              "AllTrusted"
+            ]
+          }
+        }
+      },
+      "keywords": [
+        "mfa",
+        "non-trusted",
+        "location"
+      ],
+      "policyIntent": "location-based"
+    },
+    {
+      "id": "CAL006",
+      "name": "Block access for All users from blocked countries",
+      "fullName": "CAL006-All Block access for All users from blocked countries when Browser and Modern Auth Clients-v1.0",
+      "category": "Location",
+      "priority": "Could Have",
+      "description": "Blocks access from specific countries/regions using named location definitions.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "includeLocations": true
+          }
+        }
+      },
+      "keywords": [
+        "country",
+        "blocked",
+        "location"
+      ],
+      "policyIntent": "location-based"
+    },
+    {
+      "id": "CAU001",
+      "name": "Grant Require MFA for guests when Browser and Modern Auth Clients",
+      "fullName": "CAU001-All Grant Require MFA for guests when Browser and Modern Auth Clients-v1.1",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Requires multi-factor authentication for all guest/external users.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeGuestsOrExternalUsers": true
+        }
+      },
+      "keywords": [
+        "guest",
+        "mfa",
+        "external"
+      ],
+      "policyIntent": "guest-access"
+    },
+    {
+      "id": "CAU001A",
+      "name": "Grant Require MFA for guests for Azure AD app",
+      "fullName": "CAU001A-Selected Grant Require MFA for guests when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Requires MFA for guests accessing the legacy Azure AD application specifically.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "00000002-0000-0000-c000-000000000000"
+          ]
+        },
+        "users": {
+          "includeGuestsOrExternalUsers": true
+        }
+      },
+      "keywords": [
+        "guest",
+        "mfa",
+        "azure ad",
+        "legacy"
+      ],
+      "policyIntent": "guest-access"
+    },
+    {
+      "id": "CAU002",
+      "name": "Grant Require MFA for All users when Browser and Modern Auth Clients",
+      "fullName": "CAU002-All Grant Require MFA for All users when Browser and Modern Auth Clients-v1.5",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Requires MFA for all users using authentication strength. This is the foundational MFA policy.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ],
+          "authenticationStrength": {
+            "requirementsSatisfied": "mfa"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "mfa",
+        "all users",
+        "authentication strength"
+      ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CAU003",
+      "name": "Block unapproved apps for guests when Browser and Modern Auth Clients",
+      "fullName": "CAU003-Selected Block unapproved apps for guests when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Blocks guest access to applications not specifically approved for external collaboration.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": true
+        },
+        "users": {
+          "includeGuestsOrExternalUsers": true
+        }
+      },
+      "keywords": [
+        "guest",
+        "block",
+        "unapproved",
+        "apps"
+      ],
+      "policyIntent": "guest-access"
+    },
+    {
+      "id": "CAU004",
+      "name": "Session route through MDCA for All users when Browser",
+      "fullName": "CAU004-Selected Session route through MDCA for All users when Browser-v1.0",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Routes browser sessions through Microsoft Defender for Cloud Apps for session monitoring and control.",
+      "requiredLicenses": [
+        "EntraP1",
+        "MDCA"
+      ],
+      "requiredFeatures": [
+        "MDCA"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "sessionControls": {
+          "cloudAppSecurity": {
+            "isEnabled": true
+          }
+        },
+        "applications": {
+          "includeApplications": true
+        },
+        "deviceState": {
+          "requireCompliant": false
+        }
+      },
+      "keywords": [
+        "mdca",
+        "cloud app security",
+        "session",
+        "browser"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAU005",
+      "name": "Session route through MDCA for All users when Browser on Compliant",
+      "fullName": "CAU005-Selected Session route through MDCA for All users when Browser on Compliant-v1.1",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Routes browser sessions through MDCA for compliant devices to enable session monitoring.",
+      "requiredLicenses": [
+        "EntraP1",
+        "MDCA"
+      ],
+      "requiredFeatures": [
+        "MDCA"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "sessionControls": {
+          "cloudAppSecurity": {
+            "isEnabled": true
+          }
+        },
+        "applications": {
+          "includeApplications": true
+        },
+        "deviceState": {
+          "requireCompliant": true
+        }
+      },
+      "keywords": [
+        "mdca",
+        "cloud app security",
+        "session",
+        "compliant"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAU006",
+      "name": "Grant access for Medium and High Risk Sign-in for All Users require MFA",
+      "fullName": "CAU006-All Grant access for Medium and High Risk Sign-in for All Users when Browser and Modern Auth Clients require MFA-v1.4",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Requires MFA when a sign-in is classified as medium or high risk by Entra ID Protection.",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "signInRiskLevels": [
+            "medium",
+            "high"
+          ]
+        }
+      },
+      "keywords": [
+        "risk",
+        "sign-in",
+        "mfa",
+        "medium",
+        "high"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CAU007",
+      "name": "Grant access for Medium and High Risk Users require password reset",
+      "fullName": "CAU007-All Grant access for Medium and High Risk Users for All Users when Browser and Modern Auth Clients require PWD reset-v1.3",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Requires MFA and password change when a user account is classified as medium or high risk by Entra ID Protection.",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa",
+            "passwordChange"
+          ],
+          "operator": "AND"
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "userRiskLevels": [
+            "medium",
+            "high"
+          ]
+        }
+      },
+      "keywords": [
+        "risk",
+        "user",
+        "password",
+        "change",
+        "reset"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CAU008",
+      "name": "Grant Require Phishing Resistant MFA for Admins",
+      "fullName": "CAU008-All Grant Require Phishing Resistant MFA for Admins when Browser and Modern Auth Clients-v1.4",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Requires phishing-resistant MFA (FIDO2, Windows Hello, certificate-based) for all administrators.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "PhishingResistantMFA"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "authenticationStrength": {
+            "requirementsSatisfied": "phishingResistant"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "phishing resistant",
+        "admin",
+        "fido2",
+        "authentication strength"
+      ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "CAU009",
+      "name": "Grant Require MFA for Admin Portals for All Users",
+      "fullName": "CAU009-Management Grant Require MFA for Admin Portals for All Users when Browser and Modern Auth Clients-v1.2",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Requires MFA (via authentication strength) for access to Microsoft admin portals and Azure management.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ],
+          "authenticationStrength": {
+            "requirementsSatisfied": "mfa"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "MicrosoftAdminPortals",
+            "797f4846-ba00-4fd7-ba43-dac1f8f63013"
+          ]
+        }
+      },
+      "keywords": [
+        "admin portal",
+        "management",
+        "mfa",
+        "azure"
+      ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CAU010",
+      "name": "Require Terms of Use for All users",
+      "fullName": "CAU010-All Require Terms of Use for All users when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Requires users to accept Terms of Use before accessing applications.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "TermsOfUse"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "termsOfUse": true
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "terms of use",
+        "accept"
+      ],
+      "policyIntent": "terms-of-use"
+    },
+    {
+      "id": "CAU011",
+      "name": "Block access for All users except licensed when Browser and Modern Auth Clients",
+      "fullName": "CAU011-All Block access for All users except licensed when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Blocks access for unlicensed users (except guests) to prevent unauthorized resource consumption.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeGroups": true,
+          "excludeGuestsOrExternalUsers": true
+        }
+      },
+      "keywords": [
+        "block",
+        "unlicensed",
+        "except licensed"
+      ],
+      "policyIntent": "app-restriction"
+    },
+    {
+      "id": "CAU012",
+      "name": "Combined Security Info Registration with TAP",
+      "fullName": "CAU012-RSI Combined Security Info Registration with TAP-v1.1",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Requires MFA for security info registration, supporting Temporary Access Pass for initial registration.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "TAP"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeUserActions": [
+            "urn:user:registersecurityinfo"
+          ]
+        }
+      },
+      "keywords": [
+        "security info",
+        "registration",
+        "tap",
+        "temporary access pass"
+      ],
+      "policyIntent": "registration-security"
+    },
+    {
+      "id": "CAU013",
+      "name": "Grant Require phishing resistant MFA for All users",
+      "fullName": "CAU013-All Grant Require phishing resistant MFA for All users when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Extends phishing-resistant MFA requirement to all users (not just admins). Requires full rollout of phishing-resistant methods.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "PhishingResistantMFA"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "authenticationStrength": {
+            "requirementsSatisfied": "phishingResistant"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "phishing resistant",
+        "all users",
+        "fido2",
+        "authentication strength"
+      ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CAU014",
+      "name": "Block access for High Risk Service Principals",
+      "fullName": "CAU014-All Block access for High Risk Service Principals when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Blocks service principals identified as high risk by workload identity protection.",
+      "requiredLicenses": [
+        "EntraP2",
+        "WorkloadIdentity"
+      ],
+      "requiredFeatures": [
+        "WorkloadIdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "servicePrincipalRiskLevels": [
+            "high"
+          ]
+        }
+      },
+      "keywords": [
+        "service principal",
+        "workload identity",
+        "risk",
+        "block"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CAU015",
+      "name": "Block access for High Risk Sign-in for All Users",
+      "fullName": "CAU015-All Block access for High Risk Sign-in for All Users when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Blocks access for high risk sign-ins instead of just requiring MFA (stricter than CAU006).",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser",
+          "mobileAppsAndDesktopClients"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "signInRiskLevels": [
+            "high"
+          ]
+        }
+      },
+      "keywords": [
+        "risk",
+        "sign-in",
+        "block",
+        "high"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CAU016",
+      "name": "Block access for High Risk Users for All Users",
+      "fullName": "CAU016-All Block access for High Risk Users for All Users when Browser and Modern Auth Clients-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Blocks access for high risk user accounts until remediation (stricter than CAU007).",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "userRiskLevels": [
+            "high"
+          ]
+        }
+      },
+      "keywords": [
+        "risk",
+        "user",
+        "block",
+        "high"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CAU017",
+      "name": "Session set Sign-in Frequency for Admins when Browser",
+      "fullName": "CAU017-All Session set Sign-in Frequency for Admins when Browser-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Enforces a shorter sign-in frequency for administrators using browser sessions.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "sessionControls": {
+          "signInFrequency": true
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "admin",
+        "sign-in frequency",
+        "browser",
+        "session"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAU018",
+      "name": "Session disable browser persistence for Admins when Browser",
+      "fullName": "CAU018-All Session disable browser persistence for Admins when Browser-v1.0",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Disables persistent browser sessions for administrators to require re-authentication.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "browser"
+        ],
+        "sessionControls": {
+          "persistentBrowser": {
+            "mode": "never"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "admin",
+        "persistent browser",
+        "disable",
+        "session"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CAU019",
+      "name": "Block access for All users when Insider Risk is Elevated",
+      "fullName": "CAU019-All Block access for All users when Insider Risk is Elevated-v1.0",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Blocks or restricts access for users flagged with elevated insider risk by Microsoft Purview.",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "InsiderRisk"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "insiderRiskLevels": [
+            "elevated"
+          ]
+        }
+      },
+      "keywords": [
+        "insider risk",
+        "block",
+        "elevated",
+        "purview"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CAU020",
+      "name": "Block access for high-risk AI agent workload identities",
+      "fullName": "CAU020-All Block access for high-risk AI agent workload identities-v1.0",
+      "category": "User",
+      "priority": "Could Have",
+      "description": "Blocks AI agent workload identities classified as high risk by Entra ID Protection.",
+      "requiredLicenses": [
+        "EntraP2",
+        "WorkloadIdentity"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "policyIntent": "risk-based",
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "servicePrincipalRiskLevels": [
+            "high"
+          ]
+        }
+      },
+      "keywords": [
+        "ai agent",
+        "workload identity",
+        "high risk",
+        "block"
+      ]
+    }
+  ]
+}

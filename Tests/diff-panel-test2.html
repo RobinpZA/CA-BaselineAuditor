@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Baseline Audit — Test</title>
+<style>:root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --bg-hover: #334155;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #334155;
+    --accent-blue: #3b82f6;
+    --accent-green: #22c55e;
+    --accent-yellow: #eab308;
+    --accent-red: #ef4444;
+    --accent-orange: #f97316;
+    --accent-purple: #a855f7;
+    --accent-cyan: #06b6d4;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; padding: 0; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
+.header { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); padding: 32px 24px; border-bottom: 2px solid var(--accent-blue); margin-bottom: 24px; }
+.header h1 { font-size: 1.8rem; font-weight: 700; color: #fff; }
+.header .meta { color: var(--text-secondary); font-size: 0.85rem; margin-top: 6px; }
+nav { background: var(--bg-secondary); padding: 10px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; gap: 4px; }
+nav a { color: var(--text-secondary); text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; white-space: nowrap; transition: all 0.2s; }
+nav a:hover, nav a.active { background: var(--bg-hover); color: var(--text-primary); }
+section { margin-bottom: 32px; }
+h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1rem; font-weight: 600; margin: 16px 0 10px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; }
+.card .value { font-size: 2rem; font-weight: 700; line-height: 1.2; }
+.card .label { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; }
+.score-ring { width: 120px; height: 120px; margin: 0 auto 12px; position: relative; }
+.score-ring svg { transform: rotate(-90deg); }
+.score-ring .score-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.6rem; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 16px; }
+thead th { background: var(--bg-hover); color: var(--text-primary); padding: 10px 12px; text-align: left; font-weight: 600; cursor: pointer; white-space: nowrap; position: sticky; top: 44px; }
+tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr:hover { background: var(--bg-hover); }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+.badge-green { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+.badge-yellow { background: rgba(234,179,8,0.15); color: var(--accent-yellow); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+.badge-purple { background: rgba(168,85,247,0.15); color: var(--accent-purple); }
+.badge-gray { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+.badge-orange { background: rgba(249,115,22,0.15); color: var(--accent-orange); }
+.badge-cyan { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+.status-matched { color: var(--accent-green); }
+.status-partial { color: var(--accent-yellow); }
+.status-missing { color: var(--accent-red); }
+.status-na { color: var(--text-muted); }
+.posture-pass { color: var(--accent-green); }
+.posture-warning { color: var(--accent-yellow); }
+.posture-fail { color: var(--accent-red); }
+.diff-list { margin: 4px 0; padding-left: 16px; font-size: 0.75rem; color: var(--text-secondary); }
+.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+.compare-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; margin-left: 6px; transition: all 0.15s; white-space: nowrap; }
+.compare-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent-cyan); }
+.diff-panel-wrap { background: var(--bg-secondary); border-top: 2px solid var(--accent-cyan); padding: 0; }
+.diff-inner-table { width: 100%; margin: 0; font-size: 0.78rem; border: none; }
+.diff-inner-table th { background: var(--bg-primary); padding: 6px 10px; font-size: 0.72rem; font-weight: 600; }
+.diff-inner-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.diff-inner-table tr:last-child td { border-bottom: none; }
+.diff-dim { color: var(--text-muted); width: 150px; white-space: nowrap; }
+.diff-match { color: var(--accent-green); }
+.diff-mismatch { color: var(--accent-red); }
+.filter-bar input, .filter-bar select { background: var(--bg-primary); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; }
+.filter-bar input { min-width: 200px; }
+.progress-bar { height: 8px; background: var(--bg-hover); border-radius: 4px; overflow: hidden; margin: 4px 0; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.lic-table td:first-child { font-weight: 600; width: 250px; }
+.lic-icon { font-size: 1.1rem; }
+.footer { text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.75rem; border-top: 1px solid var(--border); margin-top: 32px; }
+@media print { body { background: #fff; color: #000; } .card { border: 1px solid #ccc; } nav { display: none; } thead th { background: #eee; } }
+@media (max-width: 768px) { .card-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }</style>
+</head>
+<body>
+<div class="header">
+    <h1>&#x1F6E1;&#xFE0F; Conditional Access Baseline Audit</h1>
+    <div class="meta">Test (test.onmicrosoft.com) &mdash; Generated 2026-03-30 16:42:32</div>
+</div>
+<nav>
+    <a href="#summary" class="active">Summary</a>
+    <a href="#licensing">Licensing</a>
+    <a href="#inventory">Policy Inventory</a>
+    <a href="#gap-analysis">Gap Analysis</a>
+    <a href="#templates">MS Templates</a>
+    <a href="#devices">Devices</a>
+    <a href="#posture">Security Posture</a>
+    <a href="#recommendations">Recommendations</a>
+</nav>
+<div class="container">
+<section id="summary">
+<h2>Executive Summary</h2>
+<div class="card-grid">
+    <div class="card">
+        <div class="score-ring">
+            <svg viewBox="0 0 120 120" width="120" height="120">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-hover)" stroke-width="10"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--accent-red)" stroke-width="10" stroke-dasharray="0 314" stroke-linecap="round"/>
+            </svg>
+            <div class="score-text" style="color:var(--accent-red)">0%</div>
+        </div>
+        <div class="label">Must Have Compliance</div>
+    </div>
+    <div class="card"><div class="value status-matched">0</div><div class="label">Matched</div></div>
+    <div class="card"><div class="value status-partial">1</div><div class="label">Partial</div></div>
+    <div class="card"><div class="value status-missing">0</div><div class="label">Missing</div></div>
+    <div class="card"><div class="value status-na">0</div><div class="label">Not Applicable</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-cyan)">1</div><div class="label">Tenant Policies</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-purple)">0</div><div class="label">Custom Policies</div></div>
+    
+</div>
+</section>
+<section id="licensing">
+<h2>Licensing &amp; Feature Detection</h2>
+<table class="lic-table"><tbody>
+<tr><td class='lic-table'>Entra ID P1 (Basic CA, MFA, Location)</td><td><span class="lic-icon">&#x2705;</span> <span class="badge badge-green">Available</span></td></tr>
+<tr><td class='lic-table'>Entra ID P2 (Risk-based CA)</td><td><span class="lic-icon">&#x274C;</span> <span class="badge badge-red">Not Licensed</span></td></tr>
+<tr><td class='lic-table'>Microsoft Intune (Device Compliance)</td><td><span class="lic-icon">&#x274C;</span> <span class="badge badge-red">Not Licensed</span></td></tr>
+<tr><td class='lic-table'>Defender for Cloud Apps (MDCA)</td><td><span class="lic-icon">&#x274C;</span> <span class="badge badge-red">Not Licensed</span></td></tr>
+<tr><td class='lic-table'>Workload Identity Premium</td><td><span class="lic-icon">&#x274C;</span> <span class="badge badge-red">Not Licensed</span></td></tr>
+<tr><td class='lic-table'>Windows 365 Cloud PC</td><td><span class="lic-icon">&#x274C;</span> <span class="badge badge-red">Not Licensed</span></td></tr>
+<tr><td class='lic-table'>Defender for Endpoint</td><td><span class="lic-icon">&#x274C;</span> <span class="badge badge-red">Not Licensed</span></td></tr>
+</tbody></table>
+
+</section>
+<section id="inventory">
+<h2>Current Policy Inventory (1 policies)</h2>
+<div class="filter-bar"><input type="text" id="policyFilter" placeholder="Filter policies..." onkeyup="filterTable('policyTable','policyFilter')"><select onchange="filterTableByCol('policyTable',1,this.value)"><option value="">All States</option><option value="Enabled">Enabled</option><option value="Report-Only">Report-Only</option><option value="Disabled">Disabled</option></select></div>
+<div style="overflow-x:auto"><table id="policyTable"><thead><tr><th>Policy Name</th><th>State</th><th>Users</th><th>Applications</th><th>Grant Controls</th><th>Session Controls</th></tr></thead><tbody>
+<tr><td>Tenant MFA Policy</td><td><span class="badge badge-green">Enabled</span></td><td>All users</td><td>All Cloud Apps</td><td>Require MFA</td><td>None</td></tr>
+</tbody></table></div>
+</section>
+<section id="gap-analysis">
+<h2>Baseline Gap Analysis</h2>
+<div class="filter-bar">
+<input type="text" id="gapFilter" placeholder="Search baseline..." onkeyup="filterTable('gapTable','gapFilter')">
+<select onchange="filterGapTable('status',this.value)"><option value="">All Statuses</option><option value="Matched">Matched</option><option value="Partial">Partial</option><option value="Missing">Missing</option><option value="NotApplicable">N/A</option></select>
+<select onchange="filterGapTable('priority',this.value)"><option value="">All Priorities</option><option value="Must Have">Must Have</option><option value="Should Have">Should Have</option><option value="Could Have">Could Have</option></select>
+</div>
+<div style="overflow-x:auto"><table id="gapTable"><thead><tr><th>ID</th><th>Baseline Policy</th><th>Priority</th><th>Status</th><th>Matched / Differences</th><th>Recommendation</th></tr></thead><tbody>
+<tr class='cat-header'><td colspan='7' style='background:var(--bg-primary);padding:12px;font-weight:700;font-size:0.9rem;'>Device Policies (1)</td></tr><tr data-status='Partial' data-priority='High' data-category='Device'><td><strong>CAD001</strong></td><td>MFA for Admin Roles</td><td></td><td><span class="badge badge-yellow">&#x26A0;&#xFE0F; Partial</span></td><td>Tenant MFA Policy <button class='compare-btn' onclick='toggleDiff("CAD001")'>&harr; Diff</button><ul class="diff-list"><li>Missing platform condition</li><li>Missing location condition</li></ul></td><td>Add platform and location conditions</td></tr><tr class='diff-panel-row' id='diff-row-CAD001' style='display:none'><td colspan='6' style='padding:0'><div class="diff-panel-wrap">
+  <div style="padding:8px 12px;font-size:0.75rem;color:var(--text-muted);border-bottom:1px solid var(--border)">
+    <span style="color:var(--accent-cyan)">&#x1F4CB; Baseline:</span> MFA for Admin Roles
+    &ensp;&mdash;&ensp;
+    <span style="color:var(--accent-purple)">&#x1F4DD; Tenant Policy:</span> Tenant MFA Policy
+  </div>
+  <table class="diff-inner-table">
+    <thead><tr>
+      <th class="diff-dim">Property</th>
+      <th style="color:var(--accent-cyan)">Baseline expects</th>
+      <th style="color:var(--accent-purple)">Tenant policy has</th>
+    </tr></thead>
+    <tbody><tr><td class='diff-dim'>State</td><td>Enabled</td><td class='diff-match'><span class="diff-match">&#x2713;</span> Enabled</td></tr></tbody>
+  </table>
+</div></td></tr>
+</tbody></table></div>
+</section>
+<section id="templates">
+<h2>Microsoft CA Templates (0)</h2>
+<p style="color:var(--text-secondary)">No Microsoft CA templates retrieved.</p>
+</section>
+<section id="devices">
+<h2>Device Platform Analysis</h2>
+<div class="card-grid">
+    <div class="card"><div class="value" style="color:var(--accent-blue)">0</div><div class="label">Entra Devices</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-cyan)">0</div><div class="label">Intune Managed</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-green)">0</div><div class="label">Compliant</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-red)">0</div><div class="label">Non-Compliant</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-purple)">0</div><div class="label">Corporate-Owned</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-orange)">0</div><div class="label">BYOD</div></div>
+</div>
+<h3>Platform Breakdown</h3>
+<table><thead><tr><th>Platform</th><th>Entra</th><th>Intune Enrolled</th><th>Distribution</th></tr></thead><tbody>
+
+</tbody></table>
+</section>
+<section id="posture">
+<h2>Security Posture Findings</h2>
+<table><thead><tr><th style="width:40px"></th><th>Check</th><th>Severity</th><th>Finding</th></tr></thead><tbody>
+
+</tbody></table>
+</section>
+<section id="recommendations">
+<h2>Recommendations (0)</h2>
+<p style="color:var(--accent-green);font-weight:600;">No recommendations — all applicable baseline policies are matched!</p>
+</section>
+</div>
+<div class="footer">
+    CA-BaselineAuditor v1.0.0 &mdash; Baseline: Kenneth van Surksum October 2025 &mdash; Generated with PowerShell 7.6.0
+</div>
+<script>function filterTable(tableId, inputId) {
+    var filter = document.getElementById(inputId).value.toLowerCase();
+    var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+    rows.forEach(function(r) {
+        if (r.classList.contains('cat-header')) { r.style.display = ''; return; }
+        if (r.classList.contains('diff-panel-row')) { r.style.display = 'none'; return; }
+        r.style.display = r.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+}
+function filterTableByCol(tableId, colIdx, value) {
+    var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+    rows.forEach(function(r) {
+        if (!value) { r.style.display = ''; return; }
+        var cell = r.cells[colIdx];
+        r.style.display = cell && cell.textContent.includes(value) ? '' : 'none';
+    });
+}
+function filterGapTable(attr, value) {
+    var rows = document.getElementById('gapTable').querySelectorAll('tbody tr');
+    rows.forEach(function(r) {
+        if (r.classList.contains('cat-header')) { r.style.display = ''; return; }
+        if (r.classList.contains('diff-panel-row')) { r.style.display = 'none'; return; }
+        if (!value) { r.style.display = ''; return; }
+        r.style.display = r.dataset[attr] === value ? '' : 'none';
+    });
+}
+function toggleDiff(baselineId) {
+    var panelRow = document.getElementById('diff-row-' + baselineId);
+    if (!panelRow) return;
+    panelRow.style.display = panelRow.style.display === 'none' ? '' : 'none';
+}
+document.querySelectorAll('nav a').forEach(function(link) {
+    link.addEventListener('click', function() {
+        document.querySelectorAll('nav a').forEach(function(a) { a.classList.remove('active'); });
+        this.classList.add('active');
+    });
+});</script>
+</body>
+</html>

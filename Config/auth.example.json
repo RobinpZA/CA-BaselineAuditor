@@ -1,0 +1,5 @@
+{
+    "ClientId": "YOUR-APPLICATION-CLIENT-ID",
+    "TenantId": "YOUR-TENANT-ID",
+    "CertificateThumbprint": "YOUR-CERTIFICATE-THUMBPRINT"
+}

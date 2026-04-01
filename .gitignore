@@ -1,0 +1,23 @@
+# Build output
+build/
+Output/
+
+# Reports (generated)
+Reports/*.html
+
+# PowerShell
+*.ps1xml
+
+# IDE
+.vscode/
+*.code-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets
+Config/auth.json
+local.settings.json
+*.pfx
+*.cer
