@@ -54,7 +54,7 @@ function Get-CATenantLicensing {
 
     # ── Microsoft Defender for Cloud Apps (MDCA) ──
     $mdcaSkus      = @('ADALLOM_STANDALONE', 'ATA', 'SPE_E5')
-    $mdcaPlans     = @('ADALLOM_S_STANDALONE', 'ADALLOM_S_O365', 'ADALLOM_S_DISCOVERY', 'MDE_SMB')
+    $mdcaPlans     = @('ADALLOM_S_STANDALONE', 'ADALLOM_S_O365')
     $hasMDCA       = (& $hasAny $mdcaSkus $activeSkuPartNumbers) -or (& $hasAny $mdcaPlans $activeServicePlans)
 
     # ── Workload Identity Premium ──
