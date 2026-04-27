@@ -1,0 +1,219 @@
+{
+  "version": "6.0.1",
+  "baselineKey": "CIS",
+  "source": "CIS Microsoft 365 Foundations Benchmark v6.0.1",
+  "url": "https://www.cisecurity.org/benchmark/microsoft_365",
+  "description": "Conditional Access policy requirements from the CIS Microsoft 365 Foundations Benchmark v6.0.1. Level 1 (L1) controls are practical, minimum-security recommendations suitable for all organisations. Level 2 (L2) controls are for higher-security environments and may require additional licensing.",
+  "totalPolicies": 7,
+  "policies": [
+    {
+      "id": "CIS-L1-1.1",
+      "name": "Block Legacy Authentication",
+      "fullName": "CIS L1 1.1 — Ensure Legacy Authentication is blocked via Conditional Access",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "Legacy authentication protocols do not support MFA and can be abused to bypass Conditional Access. A Conditional Access policy SHALL block all legacy authentication clients including Other Clients and Exchange ActiveSync.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "other", "exchangeActiveSync" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "legacy", "block", "other", "activesync", "basic auth" ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "CIS-L1-1.2",
+      "name": "Require MFA for All Users",
+      "fullName": "CIS L1 1.2 — Ensure MFA is enabled for all users via Conditional Access",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Multi-factor authentication must be required for all users accessing Microsoft 365 cloud applications via Conditional Access. This is the foundational identity control for all environments.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "mfa", "all users", "multifactor", "two-factor" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CIS-L1-1.3",
+      "name": "Require MFA for Admin Roles",
+      "fullName": "CIS L1 1.3 — Ensure MFA is required for all administrator roles via Conditional Access",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "All users assigned to administrator roles must be required to use MFA via Conditional Access. Privileged accounts are high-value targets and must be protected with strong authentication.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeRoles": [ "62e90394-69f5-4237-9190-012177145e10" ]
+        }
+      },
+      "keywords": [ "mfa", "admin", "administrator", "privileged", "global admin" ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "CIS-L1-1.4",
+      "name": "Require MFA for Azure Management",
+      "fullName": "CIS L1 1.4 — Ensure MFA is required for Azure management via Conditional Access",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "MFA must be required for access to Azure management interfaces (Azure Portal, Azure CLI, Azure PowerShell) to prevent unauthorised subscription and resource modifications.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "797f4846-ba00-4fd7-ba43-dac1f8f63013" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 10,
+        "appScope": 50,
+        "conditions": 10,
+        "policyState": 10
+      },
+      "keywords": [ "azure management", "mfa", "azure portal", "arm", "azure cli" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CIS-L2-1.5",
+      "name": "Sign-In Risk-Based Conditional Access",
+      "fullName": "CIS L2 1.5 — Ensure sign-in risk policy is configured via Conditional Access",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "A Conditional Access policy leveraging Entra ID Identity Protection should be configured to require MFA or block access for sign-ins with medium or high sign-in risk levels.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP2" ],
+      "requiredFeatures": [ "IdentityProtection" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "signInRiskLevels": [ "high", "medium" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "sign-in risk", "risky", "identity protection", "risk-based" ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CIS-L2-1.6",
+      "name": "User Risk-Based Conditional Access",
+      "fullName": "CIS L2 1.6 — Ensure user risk policy is configured via Conditional Access",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "A Conditional Access policy leveraging Entra ID Identity Protection should be configured to block access or require password change for users with a high user risk level.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP2" ],
+      "requiredFeatures": [ "IdentityProtection" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "userRiskLevels": [ "high" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "user risk", "high risk", "identity protection", "risk-based", "block" ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CIS-L2-1.7",
+      "name": "Require Managed Device for Sensitive Access",
+      "fullName": "CIS L2 1.7 — Ensure managed device compliance is required for sensitive application access",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "A Conditional Access policy should require compliant or Entra hybrid joined devices for accessing sensitive cloud applications to ensure device security posture is enforced.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [ "EntraP1", "Intune" ],
+      "requiredFeatures": [ "DeviceCompliance" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "compliantDevice" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "compliant", "managed device", "hybrid", "device compliance" ],
+      "policyIntent": "device-compliance"
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+{
+  "version": "2024-06",
+  "baselineKey": "CISA",
+  "source": "CISA SCuBA — Microsoft 365 Entra ID Security Configuration Baseline",
+  "url": "https://github.com/cisagov/ScubaGear/blob/main/baselines/README.md",
+  "description": "Policies derived from the CISA Secure Cloud Business Applications (SCuBA) Security Configuration Baseline for Microsoft 365 Entra ID (MS.AAD). Only controls that require a Conditional Access policy are included.",
+  "totalPolicies": 8,
+  "policies": [
+    {
+      "id": "MS.AAD.1.1",
+      "name": "Block Legacy Authentication",
+      "fullName": "MS.AAD.1.1 — Legacy authentication SHALL be blocked",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "Legacy authentication protocols do not support modern authentication controls including MFA. All legacy authentication clients (Exchange ActiveSync and Other Clients) SHALL be blocked via Conditional Access.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad11v1",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "other", "exchangeActiveSync" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "legacy", "block", "other", "activesync" ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "MS.AAD.2.1",
+      "name": "Block High Risk Users",
+      "fullName": "MS.AAD.2.1 — Users detected as high risk SHALL be blocked",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Users with a high Identity Protection user risk score SHALL be blocked from authentication via Conditional Access until the risk is remediated by an administrator.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad21v1",
+      "requiredLicenses": [ "EntraP2" ],
+      "requiredFeatures": [ "IdentityProtection" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "userRiskLevels": [ "high" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "user risk", "high risk", "block", "identity protection" ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "MS.AAD.2.3",
+      "name": "Block High Risk Sign-Ins",
+      "fullName": "MS.AAD.2.3 — Sign-ins detected as high risk SHALL be blocked",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Sign-ins with a high Identity Protection sign-in risk score SHALL be blocked or require MFA with password change via Conditional Access.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad23v1",
+      "requiredLicenses": [ "EntraP2" ],
+      "requiredFeatures": [ "IdentityProtection" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "signInRiskLevels": [ "high" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "sign-in risk", "high risk", "block", "identity protection" ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "MS.AAD.3.1",
+      "name": "Phishing-Resistant MFA for All Users",
+      "fullName": "MS.AAD.3.1 — Phishing-resistant MFA SHALL be enforced for all users",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "All users SHALL be required to use phishing-resistant MFA (e.g. FIDO2, Windows Hello for Business, or certificate-based authentication) via a Conditional Access authentication strength policy.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad31v1",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "authenticationStrength": "phishingResistant"
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "phishing resistant", "mfa", "fido2", "authentication strength", "all users" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "MS.AAD.3.2",
+      "name": "MFA for All Users",
+      "fullName": "MS.AAD.3.2 — MFA SHALL be enforced for all users",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "All users SHALL be required to use multi-factor authentication via Conditional Access. This is the minimum requirement if phishing-resistant MFA (MS.AAD.3.1) has not yet been fully deployed.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad32v1",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "mfa", "all users", "multifactor" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "MS.AAD.3.6",
+      "name": "Phishing-Resistant MFA for Privileged Users",
+      "fullName": "MS.AAD.3.6 — Phishing-resistant MFA SHALL be required for users with highly privileged roles",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "Users assigned to highly privileged roles (Global Administrator, Privileged Role Administrator, etc.) SHALL be required to use phishing-resistant MFA via a Conditional Access authentication strength policy.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad36v1",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "authenticationStrength": "phishingResistant"
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeRoles": [ "62e90394-69f5-4237-9190-012177145e10" ]
+        }
+      },
+      "keywords": [ "phishing resistant", "mfa", "admin", "privileged", "global administrator", "authentication strength" ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "MS.AAD.3.7",
+      "name": "Managed Device Required for User Access",
+      "fullName": "MS.AAD.3.7 — Managed devices SHOULD be required for user access",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "All users accessing cloud applications SHOULD be required to use a managed device (compliant or Entra hybrid joined) via Conditional Access.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad37v1",
+      "requiredLicenses": [ "EntraP1", "Intune" ],
+      "requiredFeatures": [ "DeviceCompliance" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "compliantDevice" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "compliant", "managed device", "intune", "hybrid", "all users" ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "MS.AAD.3.8",
+      "name": "Managed Device Required for Security Info Registration",
+      "fullName": "MS.AAD.3.8 — Managed devices SHOULD be required for device registration and security info registration",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Users registering MFA methods (security information) SHOULD be required to do so from a managed device or a trusted location to prevent registration hijacking.",
+      "referenceUrl": "https://github.com/cisagov/ScubaGear/blob/main/baselines/aad.md#msaad38v1",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "applications": {
+          "includeUserActions": [ "urn:user:registersecurityinfo" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "security info", "registration", "mfa registration", "user action" ],
+      "policyIntent": "registration-security"
+    }
+  ]
+}

@@ -1,0 +1,532 @@
+{
+  "version": "2.0.0",
+  "baselineKey": "Maester",
+  "source": "Maester — MT.1xxx Conditional Access Test Suite",
+  "url": "https://maester.dev/docs/tests/maester/",
+  "description": "Conditional Access policy checks from the Maester MT.1xxx community test suite. These tests validate that your tenant has the required CA policies to meet Microsoft's recommended security baseline. Tests are based on Microsoft documentation and community best practices.",
+  "totalPolicies": 18,
+  "policies": [
+    {
+      "id": "MT.1001",
+      "name": "Device Compliance CA Policy",
+      "fullName": "MT.1001 — At least one Conditional Access policy is configured with device compliance",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "At least one Conditional Access policy should require devices to be compliant with the tenant's security configuration to access cloud applications.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1001",
+      "requiredLicenses": [ "EntraP1", "Intune" ],
+      "requiredFeatures": [ "DeviceCompliance" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "compliantDevice" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "compliant", "device compliance", "intune", "managed device" ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "MT.1006",
+      "name": "MFA Required for Admin Roles",
+      "fullName": "MT.1006 — At least one Conditional Access policy is configured to require MFA for users with administrator roles",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should require multi-factor authentication for users assigned to administrator roles to protect privileged access.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1006",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeRoles": [ "62e90394-69f5-4237-9190-012177145e10" ]
+        }
+      },
+      "keywords": [ "mfa", "admin", "administrator", "privileged", "role" ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "MT.1007",
+      "name": "MFA Required for All Users",
+      "fullName": "MT.1007 — At least one Conditional Access policy is configured to require MFA for all users",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should require multi-factor authentication for all users to protect all cloud application access.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1007",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "mfa", "all users", "multifactor" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "MT.1008",
+      "name": "MFA Required for Azure Management",
+      "fullName": "MT.1008 — At least one Conditional Access policy is configured to require MFA for Azure management",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should require MFA for access to Azure management interfaces (Azure Portal, Azure CLI, Azure PowerShell) to protect subscription and resource management.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1008",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "797f4846-ba00-4fd7-ba43-dac1f8f63013" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 10,
+        "appScope": 50,
+        "conditions": 10,
+        "policyState": 10
+      },
+      "keywords": [ "azure management", "mfa", "azure portal", "arm" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "MT.1009",
+      "name": "Block Legacy Authentication (Other Clients)",
+      "fullName": "MT.1009 — At least one Conditional Access policy is configured to block other legacy authentication",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should block legacy authentication clients (Other Clients) that do not support modern authentication and bypass MFA.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1009",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "other" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "legacy", "block", "other clients", "basic auth" ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "MT.1010",
+      "name": "Block Legacy Authentication (Exchange ActiveSync)",
+      "fullName": "MT.1010 — At least one Conditional Access policy is configured to block legacy authentication for Exchange ActiveSync",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should block Exchange ActiveSync connections which use legacy authentication protocols.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1010",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "exchangeActiveSync" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "exchange activesync", "legacy", "block", "activesync" ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "MT.1011",
+      "name": "Secure Security Info Registration from Trusted Location",
+      "fullName": "MT.1011 — At least one Conditional Access policy is configured to secure security info registration only from a trusted location",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Security info (MFA method) registration should be secured via Conditional Access, requiring users to register from a trusted location to prevent registration hijacking attacks.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1011",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "applications": {
+          "includeUserActions": [ "urn:user:registersecurityinfo" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "locations": true
+        }
+      },
+      "keywords": [ "security info", "registration", "trusted location", "user action", "mfa registration" ],
+      "policyIntent": "registration-security"
+    },
+    {
+      "id": "MT.1012",
+      "name": "MFA for Risky Sign-Ins",
+      "fullName": "MT.1012 — At least one Conditional Access policy is configured to require MFA for risky sign-ins",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "At least one Conditional Access policy should require MFA for sign-ins with a medium or high sign-in risk level as detected by Entra ID Identity Protection.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1012",
+      "requiredLicenses": [ "EntraP2" ],
+      "requiredFeatures": [ "IdentityProtection" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "signInRiskLevels": [ "high", "medium" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "sign-in risk", "risky", "mfa", "identity protection" ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "MT.1013",
+      "name": "Password Change for High User Risk",
+      "fullName": "MT.1013 — At least one Conditional Access policy is configured to require new password when user risk is high",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "At least one Conditional Access policy should require a password change for users with a high user risk level to prevent compromised accounts from being used.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1013",
+      "requiredLicenses": [ "EntraP2" ],
+      "requiredFeatures": [ "IdentityProtection" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "passwordChange" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "userRiskLevels": [ "high" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "user risk", "high risk", "password change", "identity protection" ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "MT.1014",
+      "name": "Compliant or Hybrid Device for Admins",
+      "fullName": "MT.1014 — At least one Conditional Access policy is configured to require compliant or Entra hybrid joined devices for admins",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "Users with administrator roles should be required to use a managed device (compliant or Entra hybrid joined) to access cloud applications.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1014",
+      "requiredLicenses": [ "EntraP1", "Intune" ],
+      "requiredFeatures": [ "DeviceCompliance" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "compliantDevice" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeRoles": [ "62e90394-69f5-4237-9190-012177145e10" ]
+        }
+      },
+      "keywords": [ "compliant", "hybrid", "device", "admin", "privileged" ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "MT.1015",
+      "name": "Block Unknown or Unsupported Device Platforms",
+      "fullName": "MT.1015 — At least one Conditional Access policy is configured to block access for unknown or unsupported device platforms",
+      "category": "Device",
+      "priority": "Should Have",
+      "description": "A Conditional Access policy should block access from device platforms that are not explicitly known or managed (e.g. unknown or unsupported platforms) to reduce the attack surface.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1015",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "platforms": {
+          "includePlatforms": [ "unknownFutureValue" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 10,
+        "appScope": 10,
+        "conditions": 50,
+        "policyState": 10
+      },
+      "keywords": [ "unknown platform", "unsupported", "block", "device platform" ],
+      "policyIntent": "platform-block"
+    },
+    {
+      "id": "MT.1016",
+      "name": "MFA for Guest Access",
+      "fullName": "MT.1016 — At least one Conditional Access policy is configured to require MFA for guest access",
+      "category": "User",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should require MFA for all guest and external users accessing cloud applications to protect against guest account compromises.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1016",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeGuestsOrExternalUsers": true
+        }
+      },
+      "keywords": [ "guest", "external", "mfa", "b2b" ],
+      "policyIntent": "guest-access"
+    },
+    {
+      "id": "MT.1017",
+      "name": "Non-Persistent Browser Session for Non-Corporate Devices",
+      "fullName": "MT.1017 — At least one Conditional Access policy is configured to enforce non-persistent browser session for non-corporate devices",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "A Conditional Access policy should enforce non-persistent browser sessions for users on non-corporate or unmanaged devices to minimise data leakage risk from shared devices.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1017",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "browser" ],
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "sessionControls": {
+          "persistentBrowser": {
+            "isEnabled": true,
+            "mode": "never"
+          }
+        }
+      },
+      "keywords": [ "browser session", "persistent", "non-persistent", "session" ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "MT.1018",
+      "name": "Sign-In Frequency for Non-Corporate Devices",
+      "fullName": "MT.1018 — At least one Conditional Access policy is configured to enforce sign-in frequency for non-corporate devices",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "A Conditional Access policy should enforce a sign-in frequency limit for users on non-corporate or unmanaged devices to reduce the risk of session token theft.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1018",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "sessionControls": {
+          "signInFrequency": {
+            "isEnabled": true
+          }
+        }
+      },
+      "keywords": [ "sign-in frequency", "session", "token", "reauthentication" ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "MT.1019",
+      "name": "Application Enforced Restrictions",
+      "fullName": "MT.1019 — At least one Conditional Access policy is configured to enable application enforced restrictions",
+      "category": "Device",
+      "priority": "Could Have",
+      "description": "A Conditional Access policy should enable application enforced restrictions (SharePoint Online / Exchange Online limited access) for unmanaged devices to restrict access to web-only with no download capability.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1019",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [ "MDCA" ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "browser" ],
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "sessionControls": {
+          "applicationEnforcedRestrictions": {
+            "isEnabled": true
+          }
+        }
+      },
+      "keywords": [ "app enforced restrictions", "sharepoint", "exchange", "unmanaged", "session control" ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "MT.1052",
+      "name": "Device Code Authentication Flow Policy",
+      "fullName": "MT.1052 — At least one Conditional Access policy is targeting the Device Code authentication flow",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should target and restrict the Device Code authentication flow, which can be abused in phishing attacks to authenticate on behalf of users.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1052",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "block" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        },
+        "conditions": {
+          "authenticationFlows": [ "deviceCodeFlow" ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [ "device code", "authentication flow", "block" ],
+      "policyIntent": "auth-flow-block"
+    },
+    {
+      "id": "MT.1003",
+      "name": "CA Policy Covering All Cloud Apps",
+      "fullName": "MT.1003 — At least one Conditional Access policy is configured with All cloud apps",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "description": "At least one Conditional Access policy should be scoped to All cloud apps to ensure full application coverage. Targeted app policies alone leave ungoverned applications exposed.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1003",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeUsers": [ "All" ]
+        }
+      },
+      "keywords": [ "all cloud apps", "all applications", "coverage" ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "MT.1016b",
+      "name": "MFA for Guests (External Collaboration)",
+      "fullName": "MT.1016b — External collaboration requires MFA from guest's home tenant or locally",
+      "category": "User",
+      "priority": "Should Have",
+      "description": "Guest and external users should be required to authenticate with MFA, either satisfied by their home tenant or enforced by a local Conditional Access policy.",
+      "referenceUrl": "https://maester.dev/docs/tests/MT.1016",
+      "requiredLicenses": [ "EntraP1" ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [ "all" ],
+        "grantControls": {
+          "builtInControls": [ "mfa" ]
+        },
+        "applications": {
+          "includeApplications": [ "All" ]
+        },
+        "users": {
+          "includeGuestsOrExternalUsers": true
+        }
+      },
+      "keywords": [ "guest", "external", "mfa", "b2b", "collaboration" ],
+      "policyIntent": "guest-access"
+    }
+  ]
+}

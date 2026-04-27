@@ -60,6 +60,8 @@ function Compare-CABaseline {
                 Category              = $baseline.category
                 Priority              = $baseline.priority
                 Description           = $baseline.description
+                BaselineSource        = $baseline.BaselineSource ?? 'VanSurksum'
+                ReferenceUrl          = $baseline.referenceUrl ?? ''
                 Status                = 'NotApplicable'
                 MatchScore            = 0
                 MatchedPolicy         = $null
@@ -146,6 +148,8 @@ function Compare-CABaseline {
             Category         = $baseline.category
             Priority         = $baseline.priority
             Description      = $baseline.description
+            BaselineSource        = $baseline.BaselineSource ?? 'VanSurksum'
+            ReferenceUrl          = $baseline.referenceUrl ?? ''
             Status           = $status
             MatchScore       = $bestScore
             MatchedPolicy    = if ($bestScore -ge 60 -and $bestMatch) { $bestMatch.displayName } else { $null }

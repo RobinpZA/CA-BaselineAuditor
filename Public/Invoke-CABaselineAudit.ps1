@@ -4,12 +4,22 @@ function Invoke-CABaselineAudit {
         Runs a complete Conditional Access baseline audit and generates an HTML report.
     .DESCRIPTION
         Orchestrates the full audit workflow: collects tenant data, compares against
-        the Kenneth van Surksum October 2025 baseline, performs security posture checks,
-        generates recommendations and produces a self-contained HTML report.
+        one or more industry baselines, performs security posture checks, generates
+        recommendations and produces a self-contained HTML report.
+
+        Available baselines:
+          VanSurksum  — Kenneth van Surksum October 2025 (50 policies, default)
+          CISA        — CISA SCuBA Microsoft 365 Entra ID Baseline (MS.AAD controls)
+          Maester      — Maester MT.1xxx Conditional Access Test Suite
+          CIS          — CIS Microsoft 365 Foundations Benchmark v6.0.1
+          All          — Merge all four baselines for a comprehensive cross-framework audit
     .PARAMETER OutputPath
         Path for the generated HTML report. Defaults to .\Reports\CA-Baseline-Audit_<timestamp>.html
+    .PARAMETER Baseline
+        Which baseline(s) to audit against. Accepts: VanSurksum, CISA, Maester, CIS, All.
+        Defaults to VanSurksum for backward compatibility.
     .PARAMETER BaselinePath
-        Path to a custom baseline JSON file. Defaults to the bundled vansurksum-202510.json.
+        Path to a custom baseline JSON file. Overrides the -Baseline parameter when provided.
     .PARAMETER IncludeDisabledPolicies
         Include disabled policies in the analysis.
     .PARAMETER SkipDeviceInventory
@@ -21,11 +31,18 @@ function Invoke-CABaselineAudit {
     .EXAMPLE
         Invoke-CABaselineAudit -OpenReport
     .EXAMPLE
+        Invoke-CABaselineAudit -Baseline CISA -OpenReport
+    .EXAMPLE
+        Invoke-CABaselineAudit -Baseline All -OpenReport
+    .EXAMPLE
         Invoke-CABaselineAudit -OutputPath 'C:\Reports\audit.html' -SkipDeviceInventory
     #>
     [CmdletBinding()]
     param(
         [string]$OutputPath = ".\Reports\CA-Baseline-Audit_$(Get-Date -Format 'yyyy-MM-dd_HHmmss').html",
+
+        [ValidateSet('VanSurksum', 'CISA', 'Maester', 'CIS', 'All')]
+        [string]$Baseline = 'VanSurksum',
 
         [string]$BaselinePath,
 
@@ -47,9 +64,11 @@ function Invoke-CABaselineAudit {
         throw 'Not connected to Microsoft Graph. Run Connect-CABaselineAuditor first.'
     }
 
-    Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host '║         CA-BaselineAuditor — Starting Audit                 ║' -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host '║         CA-BaselineAuditor — Starting Audit                  ║' -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
 
     $totalSteps = 8
     $step = 0
@@ -108,11 +127,52 @@ function Invoke-CABaselineAudit {
     Write-Progress -Activity 'CA Baseline Audit' -Status 'Comparing against baseline...' -PercentComplete (($step / $totalSteps) * 100)
     Write-Host "[Step $step/$totalSteps] Comparing against baseline..." -ForegroundColor Yellow
 
-    # Load baseline JSON
-    $baselineFile = if ($BaselinePath) { $BaselinePath } else { Join-Path $script:ModuleRoot 'Baselines' 'vansurksum-202510.json' }
-    $baselineData = Get-Content $baselineFile -Raw | ConvertFrom-Json
-    $baselinePolicies = $baselineData.policies
-    Write-Host "  Loaded $($baselinePolicies.Count) baseline policies from $(Split-Path $baselineFile -Leaf)" -ForegroundColor DarkGray
+    # ── Resolve which baseline file(s) to load ──
+    $baselineMap = @{
+        'VanSurksum' = 'vansurksum-202510.json'
+        'CISA'       = 'cisa-scuba-aad.json'
+        'Maester'    = 'maester-mt.json'
+        'CIS'        = 'cis-m365-foundations.json'
+    }
+
+    $activeBaselineName = 'VanSurksum'
+    $baselinePolicies   = [System.Collections.Generic.List[object]]::new()
+
+    if ($BaselinePath) {
+        # Custom file overrides everything
+        $customData = Get-Content $BaselinePath -Raw | ConvertFrom-Json
+        foreach ($p in $customData.policies) {
+            if (-not $p.PSObject.Properties['BaselineSource']) {
+                $p | Add-Member -NotePropertyName 'BaselineSource' -NotePropertyValue ($customData.source ?? 'Custom') -Force
+            }
+            $baselinePolicies.Add($p)
+        }
+        $activeBaselineName = $customData.source ?? 'Custom'
+        Write-Host "  Loaded $($baselinePolicies.Count) baseline policies from $BaselinePath" -ForegroundColor DarkGray
+    } elseif ($Baseline -eq 'All') {
+        $activeBaselineName = 'All Baselines'
+        foreach ($key in $baselineMap.Keys) {
+            $file = Join-Path $script:ModuleRoot 'Baselines' $baselineMap[$key]
+            if (Test-Path $file) {
+                $data = Get-Content $file -Raw | ConvertFrom-Json
+                foreach ($p in $data.policies) {
+                    $p | Add-Member -NotePropertyName 'BaselineSource' -NotePropertyValue $key -Force
+                    $baselinePolicies.Add($p)
+                }
+                Write-Host "  Loaded $($data.policies.Count) policies from $($baselineMap[$key]) [$key]" -ForegroundColor DarkGray
+            }
+        }
+        Write-Host "  Total: $($baselinePolicies.Count) policies across all baselines" -ForegroundColor DarkGray
+    } else {
+        $activeBaselineName = $Baseline
+        $file = Join-Path $script:ModuleRoot 'Baselines' $baselineMap[$Baseline]
+        $data = Get-Content $file -Raw | ConvertFrom-Json
+        foreach ($p in $data.policies) {
+            $p | Add-Member -NotePropertyName 'BaselineSource' -NotePropertyValue $Baseline -Force
+            $baselinePolicies.Add($p)
+        }
+        Write-Host "  Loaded $($baselinePolicies.Count) baseline policies from $($baselineMap[$Baseline]) [$Baseline]" -ForegroundColor DarkGray
+    }
 
     $comparison = Compare-CABaseline -CurrentPolicies $currentPolicies -BaselinePolicies $baselinePolicies -Licensing $licensing -DeviceInfo $deviceInfo
 
@@ -153,6 +213,7 @@ function Invoke-CABaselineAudit {
         TenantContext      = $tenantContext
         MicrosoftTemplates = $msTemplates
         PostureChecks      = $postureChecks
+        ActiveBaseline     = $activeBaselineName
     }
 
     $reportPath = Export-CABaselineReport -AuditData $auditData -OutputPath $OutputPath -OpenReport:$OpenReport
@@ -160,15 +221,17 @@ function Invoke-CABaselineAudit {
     $stopwatch.Stop()
     Write-Progress -Activity 'CA Baseline Audit' -Completed
 
-    Write-Host "`n╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
     Write-Host '║                    Audit Complete!                           ║' -ForegroundColor Green
     Write-Host "╠══════════════════════════════════════════════════════════════╣" -ForegroundColor Green
-    Write-Host "║  Tenant:   $($tenantContext.TenantName.PadRight(48))║" -ForegroundColor Green
-    Write-Host "║  Policies: $($currentPolicies.Count.ToString().PadRight(48))║" -ForegroundColor Green
-    Write-Host "║  Score:    $("$($comparison.Summary.Matched)/$($comparison.Summary.TotalBaseline) matched".PadRight(48))║" -ForegroundColor Green
-    Write-Host "║  Duration: $("$([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s".PadRight(48))║" -ForegroundColor Green
-    Write-Host "║  Report:   $($reportPath.ToString().Substring(0, [math]::Min($reportPath.Length, 48)).PadRight(48))║" -ForegroundColor Green
-    Write-Host "╚══════════════════════════════════════════════════════════════╝`n" -ForegroundColor Green
+    Write-Host "║  Tenant:   $($tenantContext.TenantName.PadRight(48))  ║" -ForegroundColor Green
+    Write-Host "║  Policies: $($currentPolicies.Count.ToString().PadRight(48))  ║" -ForegroundColor Green
+    Write-Host "║  Score:    $("$($comparison.Summary.Matched)/$($comparison.Summary.TotalBaseline) matched".PadRight(48))  ║" -ForegroundColor Green
+    Write-Host "║  Duration: $("$([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s".PadRight(48))  ║" -ForegroundColor Green
+    Write-Host "║  Report:   $($reportPath.ToString().Substring(0, [math]::Min($reportPath.Length, 48)).PadRight(48))  ║" -ForegroundColor Green
+    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host ""
 
     # Return the audit data for programmatic use
     $auditData

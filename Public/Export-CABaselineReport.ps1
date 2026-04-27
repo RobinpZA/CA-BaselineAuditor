@@ -37,11 +37,34 @@ function Export-CABaselineReport {
     $summary        = $comparison.Summary
     $tenantName     = $tenantCtx.TenantName ?? 'Unknown Tenant'
     $reportDate     = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $activeBaseline = $AuditData.ActiveBaseline ?? 'VanSurksum'
+
+    # ── Collect distinct baseline sources for filter options ──
+    $baselineSources = @($comparison.BaselineResults | Select-Object -ExpandProperty BaselineSource -Unique | Where-Object { $_ })
+    $multiBaseline   = $baselineSources.Count -gt 1
 
     # ── Compute compliance score ──
     $applicableMusts = @($comparison.BaselineResults | Where-Object { $_.Priority -eq 'Must Have' -and $_.Status -ne 'NotApplicable' })
     $matchedMusts    = @($applicableMusts | Where-Object { $_.Status -eq 'Matched' })
     $complianceScore = if ($applicableMusts.Count -gt 0) { [math]::Round(($matchedMusts.Count / $applicableMusts.Count) * 100) } else { 0 }
+
+    # ── Per-baseline scores (used when multiple baselines are active) ──
+    $perBaselineScores = [System.Collections.Generic.List[object]]::new()
+    foreach ($src in $baselineSources) {
+        $srcMusts   = @($comparison.BaselineResults | Where-Object { $_.BaselineSource -eq $src -and $_.Priority -eq 'Must Have' -and $_.Status -ne 'NotApplicable' })
+        $srcMatched = @($srcMusts | Where-Object { $_.Status -eq 'Matched' })
+        $srcPartial = @($comparison.BaselineResults | Where-Object { $_.BaselineSource -eq $src -and $_.Status -eq 'Partial' }).Count
+        $srcMissing = @($comparison.BaselineResults | Where-Object { $_.BaselineSource -eq $src -and $_.Status -eq 'Missing' }).Count
+        $srcScore   = if ($srcMusts.Count -gt 0) { [math]::Round(($srcMatched.Count / $srcMusts.Count) * 100) } else { 0 }
+        $perBaselineScores.Add([PSCustomObject]@{
+            Source  = $src
+            Score   = $srcScore
+            Matched = $srcMatched.Count
+            Partial = $srcPartial
+            Missing = $srcMissing
+            Total   = $srcMusts.Count
+        })
+    }
 
     # ── Severity counts for posture ──
     $postureFindings = @($postureChecks.Values | Where-Object { $_.Status -ne 'Pass' })
@@ -102,6 +125,11 @@ tbody tr:hover { background: var(--bg-hover); }
 .badge-gray { background: rgba(100,116,139,0.15); color: var(--text-muted); }
 .badge-orange { background: rgba(249,115,22,0.15); color: var(--accent-orange); }
 .badge-cyan { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+.badge-baseline-vansurksum { background: rgba(99,102,241,0.15); color: #818cf8; }
+.badge-baseline-cisa { background: rgba(239,68,68,0.15); color: #f87171; }
+.badge-baseline-maester { background: rgba(34,197,94,0.15); color: var(--accent-green); }
+.badge-baseline-cis { background: rgba(249,115,22,0.15); color: var(--accent-orange); }
+.badge-baseline-custom { background: rgba(168,85,247,0.15); color: var(--accent-purple); }
 .status-matched { color: var(--accent-green); }
 .status-partial { color: var(--accent-yellow); }
 .status-missing { color: var(--accent-red); }
@@ -130,6 +158,81 @@ tbody tr:hover { background: var(--bg-hover); }
 .footer { text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.75rem; border-top: 1px solid var(--border); margin-top: 32px; }
 @media print { body { background: #fff; color: #000; } .card { border: 1px solid #ccc; } nav { display: none; } thead th { background: #eee; } }
 @media (max-width: 768px) { .card-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
+/* ── Policy Flow Visualizer ── */
+.viz-grid { display: flex; flex-direction: column; gap: 12px; }
+.viz-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color 0.2s; }
+.viz-card:hover { border-color: var(--accent-blue); }
+.viz-state-disabled { opacity: 0.65; }
+.viz-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
+.viz-name { font-weight: 600; font-size: 0.88rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.viz-flow { display: flex; align-items: stretch; flex-wrap: nowrap; }
+.viz-node { flex: 1; padding: 10px 14px; border-right: 1px solid var(--border); min-width: 0; }
+.viz-node:last-child { border-right: none; }
+.viz-node-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.06em; margin-bottom: 6px; }
+.viz-node-body { font-size: 0.78rem; }
+.viz-item { padding: 1px 0; color: var(--text-secondary); word-break: break-word; }
+.viz-excl { color: var(--text-muted); font-style: italic; font-size: 0.73rem; }
+.viz-session { color: var(--accent-cyan); font-size: 0.73rem; margin-top: 3px; }
+.viz-arrow { display: flex; align-items: center; justify-content: center; padding: 0 4px; color: var(--text-muted); font-size: 1.1rem; flex-shrink: 0; }
+.viz-node-allow .viz-node-label { color: var(--accent-green); }
+.viz-node-allow .viz-item:first-child { color: var(--accent-green); font-weight: 600; }
+.viz-node-block { background: rgba(239,68,68,0.05); }
+.viz-node-block .viz-node-label { color: var(--accent-red); }
+.viz-node-block .viz-item { color: var(--accent-red); font-weight: 600; }
+.viz-node-session .viz-node-label { color: var(--accent-cyan); }
+@media (max-width: 900px) { .viz-flow { flex-direction: column; } .viz-node { border-right: none; border-bottom: 1px solid var(--border); } .viz-arrow { display: none; } }
+/* ── Policy Flow Modal ── */
+.flow-modal { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center; }
+.flow-modal.open { display: flex; }
+.flow-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.82); backdrop-filter: blur(3px); }
+.flow-box { position: relative; background: var(--bg-secondary); border: 1px solid #6366f1; border-radius: 14px; width: min(96vw, 880px); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.7); z-index: 1; }
+.flow-titlebar { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg-primary); gap: 12px; flex-shrink: 0; }
+.flow-titlebar h3 { flex: 1; font-size: 0.92rem; font-weight: 600; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-close-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; padding: 5px 12px; border-radius: 6px; transition: all 0.15s; flex-shrink: 0; }
+.flow-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.flow-scroll { overflow-y: auto; overflow-x: auto; padding: 32px 24px; display: flex; justify-content: center; }
+/* ── Flow diagram tree ── */
+.ftree { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 540px; }
+.ftree-vc { width: 2px; height: 32px; background: var(--border); flex-shrink: 0; }
+.ftree-vc-short { width: 2px; height: 20px; background: var(--border); flex-shrink: 0; }
+.ftree-row { display: flex; gap: 20px; justify-content: center; align-items: flex-start; }
+.ftree-conds { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: 820px; }
+.ftree-outcomes { display: flex; gap: 24px; justify-content: center; align-items: flex-start; }
+.ftree-ob { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.ftree-ob-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.09em; padding: 4px 14px; border-radius: 999px; white-space: nowrap; }
+.ftree-sat { background: rgba(34,197,94,0.15); color: var(--accent-green); border: 1px dashed rgba(34,197,94,0.45); }
+.ftree-notmet { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 1px dashed rgba(239,68,68,0.45); }
+.ftree-applied { background: rgba(6,182,212,0.15); color: var(--accent-cyan); border: 1px dashed rgba(6,182,212,0.45); }
+/* Flow node base */
+.fn { border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; width: 200px; flex-shrink: 0; text-align: center; box-sizing: border-box; }
+.fn-type { font-size: 0.56rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; margin-bottom: 6px; }
+.fn-title { font-size: 0.84rem; font-weight: 600; line-height: 1.35; }
+.fn-sub { font-size: 0.7rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.55; text-align: left; }
+.fn-sub div { padding: 2px 0; }
+/* Node colour variants */
+.fn-policy { background: linear-gradient(135deg,rgba(59,130,246,0.14),rgba(99,102,241,0.14)); border-color: #6366f1; }
+.fn-policy .fn-type { color: #818cf8; }
+.fn-target { background: rgba(6,182,212,0.08); border-color: #0891b2; }
+.fn-target .fn-type { color: #22d3ee; }
+.fn-who { background: rgba(236,72,153,0.1); border-color: #be185d; }
+.fn-who .fn-type { color: #f472b6; }
+.fn-decision { background: rgba(168,85,247,0.1); border-color: #9333ea; }
+.fn-decision .fn-type { color: #c084fc; }
+.fn-cond { background: rgba(234,179,8,0.08); border-color: #b45309; }
+.fn-cond .fn-type { color: #f59e0b; }
+.fn-grant { background: rgba(168,85,247,0.12); border-color: #7c3aed; }
+.fn-grant .fn-type { color: #a78bfa; }
+.fn-block { background: rgba(239,68,68,0.1); border-color: #dc2626; }
+.fn-block .fn-type { color: #f87171; }
+.fn-ok { background: rgba(34,197,94,0.1); border-color: #16a34a; }
+.fn-ok .fn-type { color: #4ade80; }
+.fn-deny { background: rgba(239,68,68,0.1); border-color: #dc2626; }
+.fn-deny .fn-type { color: #f87171; }
+.fn-session { background: rgba(6,182,212,0.1); border-color: #0891b2; }
+.fn-session .fn-type { color: #22d3ee; }
+/* View flow button on viz-cards */
+.viz-flow-btn { background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; padding: 3px 10px; border-radius: 6px; font-size: 0.71rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; margin-left: auto; }
+.viz-flow-btn:hover { background: rgba(99,102,241,0.22); border-color: #818cf8; color: #e0e7ff; }
 '@
 
     # ═══════════════════════════════════════════════════════════════════
@@ -142,7 +245,40 @@ tbody tr:hover { background: var(--bg-hover); }
                    else { 'var(--accent-red)' }
     $dashArray   = [math]::Round(($complianceScore / 100) * 314, 1)
 
+    # ── Per-baseline score cards (shown when All baselines selected) ──
+    $perBaselineCardsHtml = ''
+    if ($multiBaseline) {
+        $bCards = foreach ($b in $perBaselineScores) {
+            $bColour  = if ($b.Score -ge 80) { 'var(--accent-green)' } elseif ($b.Score -ge 50) { 'var(--accent-yellow)' } else { 'var(--accent-red)' }
+            $bDash    = [math]::Round(($b.Score / 100) * 188, 1)
+            $bClass   = 'badge-baseline-' + $b.Source.ToLower()
+            @"
+    <div class="card">
+        <div style="width:80px;height:80px;margin:0 auto 8px;position:relative">
+            <svg viewBox="0 0 80 80" width="80" height="80" style="transform:rotate(-90deg)">
+                <circle cx="40" cy="40" r="30" fill="none" stroke="var(--bg-hover)" stroke-width="7"/>
+                <circle cx="40" cy="40" r="30" fill="none" stroke="$bColour" stroke-width="7" stroke-dasharray="$bDash 188" stroke-linecap="round"/>
+            </svg>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.1rem;font-weight:700;color:$bColour">$($b.Score)%</div>
+        </div>
+        <div style="margin-bottom:4px"><span class="badge $bClass">$($b.Source)</span></div>
+        <div style="font-size:0.72rem;color:var(--text-secondary)"><span style="color:var(--accent-green)">$($b.Matched) matched</span> &bull; <span style="color:var(--accent-yellow)">$($b.Partial) partial</span> &bull; <span style="color:var(--accent-red)">$($b.Missing) missing</span></div>
+        <div class="label" style="margin-top:4px">Must Have ($($b.Total) checks)</div>
+    </div>
+"@
+        }
+        $perBaselineCardsHtml = @"
+<div style="margin-top:24px">
+<h3>Compliance Score by Baseline</h3>
+<div class="card-grid">
+$($bCards -join '')
+</div>
+</div>
+"@
+    }
+
     # ── Section 1: Executive Summary ──
+    $scoreLabel = if ($multiBaseline) { 'Overall Must Have Compliance' } else { "Must Have Compliance ($activeBaseline)" }
     $sec1 = @"
 <section id="summary">
 <h2>Executive Summary</h2>
@@ -155,7 +291,7 @@ tbody tr:hover { background: var(--bg-hover); }
             </svg>
             <div class="score-text" style="color:$scoreColour">$complianceScore%</div>
         </div>
-        <div class="label">Must Have Compliance</div>
+        <div class="label">$scoreLabel</div>
     </div>
     <div class="card"><div class="value status-matched">$($summary.Matched)</div><div class="label">Matched</div></div>
     <div class="card"><div class="value status-partial">$($summary.Partial)</div><div class="label">Partial</div></div>
@@ -165,6 +301,7 @@ tbody tr:hover { background: var(--bg-hover); }
     <div class="card"><div class="value" style="color:var(--accent-purple)">$($summary.Custom)</div><div class="label">Custom Policies</div></div>
     $(if ($criticalFindings -gt 0) { "<div class='card'><div class='value' style='color:var(--accent-red)'>$criticalFindings</div><div class='label'>Critical Findings</div></div>" })
 </div>
+$perBaselineCardsHtml
 </section>
 "@
 
@@ -511,12 +648,22 @@ $($policyRows.ToString())
                 $bid = [System.Web.HttpUtility]::HtmlEncode($r.BaselineId)
                 $compareBtn = " <button class='compare-btn' onclick='toggleDiff(`"$bid`")'>&harr; Diff</button>"
                 $panelHtml  = Format-PolicyDiffPanel -r $r
-                $panelRow   = "<tr class='diff-panel-row' id='diff-row-$bid' style='display:none'><td colspan='6' style='padding:0'>$panelHtml</td></tr>"
+                $panelRow   = "<tr class='diff-panel-row' id='diff-row-$bid' style='display:none'><td colspan='7' style='padding:0'>$panelHtml</td></tr>"
             }
 
-            [void]$gapRows.Append("<tr data-status='$($r.Status)' data-priority='$($r.Priority)' data-category='$cat'><td><strong>$($r.BaselineId)</strong></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.BaselineName))</td><td>$priorityBadge</td><td>$statusBadge</td><td>$matchedName$compareBtn$diffHtml</td><td>$recText</td></tr>")
+            $bSource      = $r.BaselineSource ?? 'VanSurksum'
+            $bSourceClass = 'badge-baseline-' + $bSource.ToLower()
+            $bSourceBadge = "<span class='badge $bSourceClass'>$([System.Web.HttpUtility]::HtmlEncode($bSource))</span>"
+            $refLinkHtml  = if ($r.ReferenceUrl) { " <a href='$([System.Web.HttpUtility]::HtmlEncode($r.ReferenceUrl))' target='_blank' title='Reference' style='font-size:0.75em;opacity:0.7'>&#x2197;</a>" } else { '' }
+
+            [void]$gapRows.Append("<tr data-status='$($r.Status)' data-priority='$($r.Priority)' data-category='$cat' data-baseline='$bSource'><td><strong>$($r.BaselineId)</strong>$refLinkHtml</td><td>$bSourceBadge</td><td>$([System.Web.HttpUtility]::HtmlEncode($r.BaselineName))</td><td>$priorityBadge</td><td>$statusBadge</td><td>$matchedName$compareBtn$diffHtml</td><td>$recText</td></tr>")
             if ($panelRow) { [void]$gapRows.Append($panelRow) }
         }
+    }
+
+    $baselineFilterOptions = '<option value="">All Baselines</option>'
+    foreach ($src in $baselineSources) {
+        $baselineFilterOptions += "<option value='$([System.Web.HttpUtility]::HtmlEncode($src))'>$([System.Web.HttpUtility]::HtmlEncode($src))</option>"
     }
 
     $sec4 = @"
@@ -526,8 +673,9 @@ $($policyRows.ToString())
 <input type="text" id="gapFilter" placeholder="Search baseline..." onkeyup="filterTable('gapTable','gapFilter')">
 <select onchange="filterGapTable('status',this.value)"><option value="">All Statuses</option><option value="Matched">Matched</option><option value="Partial">Partial</option><option value="Missing">Missing</option><option value="NotApplicable">N/A</option></select>
 <select onchange="filterGapTable('priority',this.value)"><option value="">All Priorities</option><option value="Must Have">Must Have</option><option value="Should Have">Should Have</option><option value="Could Have">Could Have</option></select>
+<select onchange="filterGapTable('baseline',this.value)">$baselineFilterOptions</select>
 </div>
-<div style="overflow-x:auto"><table id="gapTable"><thead><tr><th onclick="sortTable('gapTable',0)">ID</th><th onclick="sortTable('gapTable',1)">Baseline Policy</th><th onclick="sortTable('gapTable',2)">Priority</th><th onclick="sortTable('gapTable',3)">Status</th><th onclick="sortTable('gapTable',4)">Matched / Differences</th><th onclick="sortTable('gapTable',5)">Recommendation</th></tr></thead><tbody>
+<div style="overflow-x:auto"><table id="gapTable"><thead><tr><th onclick="sortTable('gapTable',0)">ID</th><th onclick="sortTable('gapTable',1)">Baseline</th><th onclick="sortTable('gapTable',2)">Baseline Policy</th><th onclick="sortTable('gapTable',3)">Priority</th><th onclick="sortTable('gapTable',4)">Status</th><th onclick="sortTable('gapTable',5)">Matched / Differences</th><th onclick="sortTable('gapTable',6)">Recommendation</th></tr></thead><tbody>
 $($gapRows.ToString())
 </tbody></table></div>
 </section>
@@ -664,6 +812,433 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
 </section>
 "@
 
+    # ── Section 8: Policy Flow Visualizer ──
+    function Format-PolicyVizCard {
+        param([object]$Policy, [hashtable]$IdentityLookup = @{})
+
+        $enc        = [System.Web.HttpUtility]
+        $stateLabel = $Policy.StateLabel ?? $Policy.state
+        $stateCls   = switch ($Policy.state) {
+            'enabled'                          { 'badge-green'  }
+            'enabledForReportingButNotEnforced' { 'badge-yellow' }
+            'disabled'                         { 'badge-gray'   }
+            default                            { 'badge-gray'   }
+        }
+        $disabledCls = if ($Policy.state -eq 'disabled') { ' viz-state-disabled' } else { '' }
+        $pName       = $enc::HtmlEncode($Policy.displayName)
+        $stateBadge  = "<span class='badge $stateCls'>$($enc::HtmlEncode($stateLabel))</span>"
+
+        # ── Users node ──
+        $usrs      = $Policy.conditions.users
+        $userLines = [System.Collections.Generic.List[string]]::new()
+        if (($usrs.includeUsers ?? @()) -contains 'All') {
+            $exCount = ($usrs.excludeUsers ?? @()).Count + ($usrs.excludeGroups ?? @()).Count
+            $userLines.Add("All Users$(if ($exCount -gt 0) { " (-$exCount excl.)" })")
+        } elseif ($usrs.includeGuestsOrExternalUsers -or (($usrs.includeUsers ?? @()) -contains 'GuestsOrExternalUsers')) {
+            $userLines.Add('Guests / External Users')
+        } else {
+            $MAX_NAMES = 5
+            $incGroups = @($usrs.includeGroups ?? @())
+            $incRoles  = @($usrs.includeRoles  ?? @())
+            $incUsers  = @(($usrs.includeUsers ?? @()) | Where-Object { $_ -notin @('All','None','GuestsOrExternalUsers') })
+            foreach ($gid in ($incGroups | Select-Object -First $MAX_NAMES)) {
+                $userLines.Add($(if ($IdentityLookup.ContainsKey($gid)) { $IdentityLookup[$gid] } else { $gid }))
+            }
+            if ($incGroups.Count -gt $MAX_NAMES) { $userLines.Add("+ $($incGroups.Count - $MAX_NAMES) more group(s)") }
+            foreach ($rid in ($incRoles | Select-Object -First $MAX_NAMES)) {
+                $rName = if ($IdentityLookup.ContainsKey($rid)) { $IdentityLookup[$rid] } else { $rid }
+                $userLines.Add("Role: $rName")
+            }
+            if ($incRoles.Count -gt $MAX_NAMES) { $userLines.Add("+ $($incRoles.Count - $MAX_NAMES) more role(s)") }
+            foreach ($uid in ($incUsers | Select-Object -First 3)) {
+                $userLines.Add($(if ($IdentityLookup.ContainsKey($uid)) { $IdentityLookup[$uid] } else { $uid }))
+            }
+            if ($incUsers.Count -gt 3) { $userLines.Add("+ $($incUsers.Count - 3) more user(s)") }
+        }
+        if ($userLines.Count -eq 0) { $userLines.Add('Not configured') }
+        $exclLines = [System.Collections.Generic.List[string]]::new()
+        $excGroups = @($usrs.excludeGroups ?? @())
+        $excUsers  = @(($usrs.excludeUsers ?? @()) | Where-Object { $_ -notin @('All','None','GuestsOrExternalUsers') })
+        $excRoles  = @($usrs.excludeRoles  ?? @())
+        foreach ($gid in ($excGroups | Select-Object -First 3)) {
+            $exclLines.Add("Excl: $(if ($IdentityLookup.ContainsKey($gid)) { $IdentityLookup[$gid] } else { $gid })")
+        }
+        if ($excGroups.Count -gt 3) { $exclLines.Add("Excl: + $($excGroups.Count - 3) more group(s)") }
+        foreach ($uid in ($excUsers | Select-Object -First 3)) {
+            $exclLines.Add("Excl: $(if ($IdentityLookup.ContainsKey($uid)) { $IdentityLookup[$uid] } else { $uid })")
+        }
+        if ($excUsers.Count -gt 3) { $exclLines.Add("Excl: + $($excUsers.Count - 3) more user(s)") }
+        foreach ($rid in ($excRoles | Select-Object -First 3)) {
+            $rName = if ($IdentityLookup.ContainsKey($rid)) { $IdentityLookup[$rid] } else { $rid }
+            $exclLines.Add("Excl role: $rName")
+        }
+        if ($excRoles.Count -gt 3) { $exclLines.Add("Excl: + $($excRoles.Count - 3) more role(s)") }
+        $userHtml  = ($userLines | ForEach-Object { "<div class='viz-item'>$($enc::HtmlEncode($_))</div>" }) -join ''
+        $userHtml += ($exclLines | ForEach-Object { "<div class='viz-item viz-excl'>$($enc::HtmlEncode($_))</div>" }) -join ''
+
+        # ── Apps node ──
+        $wellKnown = Get-WellKnownAppId
+        $appsCond  = $Policy.conditions.applications
+        $appLines  = [System.Collections.Generic.List[string]]::new()
+        $incApps   = $appsCond.includeApplications ?? @()
+        $incActions = @($appsCond.includeUserActions ?? @())
+        $incAuthCtx = @($appsCond.includeAuthenticationContextClassReferences ?? @())
+        if     ($incApps -contains 'All')       { $appLines.Add('All Cloud Apps') }
+        elseif ($incApps -contains 'None')      { $appLines.Add('No Cloud Apps') }
+        elseif ($incApps -contains 'Office365') { $appLines.Add('Office 365') }
+        elseif ($incApps.Count -gt 0) {
+            foreach ($appId in ($incApps | Select-Object -First 3)) {
+                $appLines.Add($(if ($wellKnown.ContainsKey($appId)) { $wellKnown[$appId] } else { $appId }))
+            }
+            if ($incApps.Count -gt 3) { $appLines.Add("+ $($incApps.Count - 3) more") }
+        }
+        if ($incActions.Count -gt 0) {
+            $appLines.Add("Action: $($incActions -join ', ')")
+        }
+        if ($incAuthCtx.Count -gt 0) {
+            foreach ($ctx in ($incAuthCtx | Select-Object -First 3)) {
+                $ctxId   = if ($ctx -is [string]) { $ctx } else { $ctx.id ?? $ctx.ToString() }
+                $ctxName = if ($IdentityLookup.ContainsKey($ctxId)) { $IdentityLookup[$ctxId] } else { $ctxId }
+                $appLines.Add("Auth context: $ctxName")
+            }
+            if ($incAuthCtx.Count -gt 3) { $appLines.Add("+ $($incAuthCtx.Count - 3) more context(s)") }
+        }
+        if ($appLines.Count -eq 0) { $appLines.Add('Not configured') }
+        $appHtml = ($appLines | ForEach-Object { "<div class='viz-item'>$($enc::HtmlEncode($_))</div>" }) -join ''
+
+        # ── Conditions node ──
+        $condLines   = [System.Collections.Generic.List[string]]::new()
+        $clientTypes = $Policy.conditions.clientAppTypes ?? @()
+        if ($clientTypes.Count -gt 0) {
+            if ($clientTypes -contains 'all') { $condLines.Add('Client: All') }
+            else { $condLines.Add("Client: $($clientTypes -join ', ')") }
+        }
+        $plat = $Policy.conditions.platforms
+        if ($plat -and ($plat.includePlatforms ?? @()).Count -gt 0) {
+            $pp = $plat.includePlatforms
+            if ($pp -contains 'all') { $condLines.Add('Platform: All') } else { $condLines.Add("Platform: $($pp -join ', ')") }
+        }
+        $loc = $Policy.conditions.locations
+        if ($loc) {
+            $li = $loc.includeLocations ?? @()
+            $le = $loc.excludeLocations ?? @()
+            if     ($li -contains 'All')       { $condLines.Add('Location: All') }
+            elseif ($li.Count -gt 0)            { $condLines.Add("Location: $($li.Count) location(s)") }
+            if     ($le -contains 'AllTrusted') { $condLines.Add('Excl: Trusted locations') }
+            elseif ($le.Count -gt 0)            { $condLines.Add("Excl: $($le.Count) location(s)") }
+        }
+        $sir   = $Policy.conditions.signInRiskLevels   ?? @()
+        $urisk = $Policy.conditions.userRiskLevels     ?? @()
+        $irisk = $Policy.conditions.insiderRiskLevels  ?? @()
+        if ($sir.Count   -gt 0) { $condLines.Add("Sign-in risk: $($sir   -join ', ')") }
+        if ($urisk.Count -gt 0) { $condLines.Add("User risk: $($urisk    -join ', ')") }
+        if ($irisk.Count -gt 0) { $condLines.Add("Insider risk: $($irisk -join ', ')") }
+        $devs = $Policy.conditions.devices
+        if ($devs -and $devs.deviceFilter -and $devs.deviceFilter.mode) {
+            $fm = if ($devs.deviceFilter.mode -eq 'include') { 'Device filter: include' } else { 'Device filter: exclude' }
+            $condLines.Add($fm)
+        }
+        $af = if ($Policy.conditions.authenticationFlows) { $Policy.conditions.authenticationFlows.transferMethods ?? @() } else { @() }
+        if ($af.Count -gt 0) { $condLines.Add("Auth flow: $($af -join ', ')") }
+        if ($condLines.Count -eq 0) { $condLines.Add('No additional conditions') }
+        $condHtml = ($condLines | ForEach-Object { "<div class='viz-item'>$($enc::HtmlEncode($_))</div>" }) -join ''
+
+        # ── Outcome node ──
+        $isBlock        = ($Policy.grantControls.builtInControls ?? @()) -contains 'block'
+        $grantStr       = Format-GrantControls  -Policy $Policy
+        $sessionStr     = Format-SessionControls -Policy $Policy
+        $hasSession     = $sessionStr -and $sessionStr -ne 'None'
+        $outcomeNodeCls = if ($isBlock) { 'viz-node viz-node-block' }
+                          elseif (-not $Policy.grantControls -and $hasSession) { 'viz-node viz-node-session' }
+                          else { 'viz-node viz-node-allow' }
+        $outcomeIcon    = if ($isBlock) { '&#x1F6AB;' } elseif (-not $Policy.grantControls -and $hasSession) { '&#x1F4CB;' } else { '&#x2705;' }
+        $outcomeGrant   = "<div class='viz-item'>$outcomeIcon $($enc::HtmlEncode($grantStr))</div>"
+        $outcomeSess    = if ($hasSession) { "<div class='viz-item viz-session'>&#x1F4CB; $($enc::HtmlEncode($sessionStr))</div>" } else { '' }
+
+        $flowDiagHtml   = Format-PolicyFlowDiagram -Policy $Policy -IdentityLookup $IdentityLookup
+
+        return @"
+<div class="viz-card$disabledCls" data-state="$($enc::HtmlEncode($stateLabel))">
+  <div class="viz-header">
+    <span class="viz-name" title="$pName">$pName</span>
+    $stateBadge
+    <button class="viz-flow-btn" onclick="openFlowModal(this)">&#x1F4CA; Flow</button>
+  </div>
+  <div class="viz-flow">
+    <div class="viz-node">
+      <div class="viz-node-label">&#x1F464; Users</div>
+      <div class="viz-node-body">$userHtml</div>
+    </div>
+    <div class="viz-arrow">&#x279C;</div>
+    <div class="viz-node">
+      <div class="viz-node-label">&#x2601;&#xFE0F; Apps</div>
+      <div class="viz-node-body">$appHtml</div>
+    </div>
+    <div class="viz-arrow">&#x279C;</div>
+    <div class="viz-node">
+      <div class="viz-node-label">&#x1F50D; Conditions</div>
+      <div class="viz-node-body">$condHtml</div>
+    </div>
+    <div class="viz-arrow">&#x279C;</div>
+    <div class="$outcomeNodeCls">
+      <div class="viz-node-label">&#x2696;&#xFE0F; Outcome</div>
+      <div class="viz-node-body">$outcomeGrant$outcomeSess</div>
+    </div>
+  </div>
+  <div class="viz-flow-data" style="display:none">$flowDiagHtml</div>
+</div>
+"@
+    }
+
+    function Format-PolicyFlowDiagram {
+        param([object]$Policy, [hashtable]$IdentityLookup = @{})
+
+        $enc          = [System.Web.HttpUtility]
+        $isReportOnly = $Policy.state -eq 'enabledForReportingButNotEnforced'
+        $stateBadge   = switch ($Policy.state) {
+            'enabled'                          { '<span class="badge badge-green">Enabled</span>' }
+            'enabledForReportingButNotEnforced' { '<span class="badge badge-yellow">Report-Only</span>' }
+            'disabled'                         { '<span class="badge badge-gray">Disabled</span>' }
+            default                            { "<span class='badge badge-gray'>$($Policy.state)</span>" }
+        }
+
+        # ── WHAT (Apps) ──
+        $wellKnown  = Get-WellKnownAppId
+        $appsCond   = $Policy.conditions.applications
+        $incApps    = @($appsCond.includeApplications ?? @())
+        $incActions = @($appsCond.includeUserActions ?? @())
+        $incAuthCtx = @($appsCond.includeAuthenticationContextClassReferences ?? @())
+        $appTitle  = if     ($incApps -contains 'All')       { 'All Cloud Apps' }
+                     elseif ($incApps -contains 'Office365') { 'Office 365' }
+                     elseif ($incApps -contains 'None')      { 'No Cloud Apps' }
+                     elseif ($incApps.Count -eq 1)           { if ($wellKnown.ContainsKey($incApps[0])) { $wellKnown[$incApps[0]] } else { $incApps[0] } }
+                     elseif ($incApps.Count -gt 1)           { "$($incApps.Count) applications" }
+                     elseif ($incActions.Count -gt 0)        { "User Action: $($incActions[0])$(if ($incActions.Count -gt 1) { " + $($incActions.Count - 1) more" })" }
+                     elseif ($incAuthCtx.Count -gt 0)        {
+                         $ctxId   = if ($incAuthCtx[0] -is [string]) { $incAuthCtx[0] } else { $incAuthCtx[0].id ?? $incAuthCtx[0].ToString() }
+                         $ctxName = if ($IdentityLookup.ContainsKey($ctxId)) { $IdentityLookup[$ctxId] } else { $ctxId }
+                         if ($incAuthCtx.Count -gt 1) { "Auth Context: $ctxName + $($incAuthCtx.Count - 1) more" } else { "Auth Context: $ctxName" }
+                     }
+                     else                                    { 'Not configured' }
+        $appSubItems = [System.Collections.Generic.List[string]]::new()
+        # User actions already surfaced in title when primary; show all as sub-items too
+        foreach ($a in $incActions) { $appSubItems.Add("Action: $a") }
+        # Auth contexts: list them all as sub-items (title shows the first)
+        foreach ($ctx in $incAuthCtx) {
+            $ctxId   = if ($ctx -is [string]) { $ctx } else { $ctx.id ?? $ctx.ToString() }
+            $ctxName = if ($IdentityLookup.ContainsKey($ctxId)) { $IdentityLookup[$ctxId] } else { $ctxId }
+            $appSubItems.Add("Auth context: $ctxName")
+        }
+        $excApps = @($appsCond.excludeApplications ?? @())
+        if ($excApps.Count -gt 0) { $appSubItems.Add("Excl: $($excApps.Count) app(s)") }
+
+        # ── WHO (Users) ──
+        $usrs      = $Policy.conditions.users
+        $incUsers  = @($usrs.includeUsers  ?? @())
+        $incGroups = @($usrs.includeGroups ?? @())
+        $incRoles  = @($usrs.includeRoles  ?? @())
+        $excUsers  = @($usrs.excludeUsers  ?? @())
+        $excGroups = @($usrs.excludeGroups ?? @())
+        $excRoles  = @($usrs.excludeRoles  ?? @())
+        $incSpecificUsers = @($incUsers | Where-Object { $_ -notin @('All','None','GuestsOrExternalUsers') })
+        $whoTitle  = if ($incUsers -contains 'All') { 'All Users' }
+                     elseif ($usrs.includeGuestsOrExternalUsers -or ($incUsers -contains 'GuestsOrExternalUsers')) { 'Guests / External Users' }
+                     elseif ($incGroups.Count -gt 0) {
+                         $n = if ($IdentityLookup.ContainsKey($incGroups[0])) { $IdentityLookup[$incGroups[0]] } else { $incGroups[0] }
+                         if ($incGroups.Count -gt 1) { "$n + $($incGroups.Count - 1) more group(s)" } else { $n }
+                     }
+                     elseif ($incRoles.Count -gt 0) {
+                         $n = if ($IdentityLookup.ContainsKey($incRoles[0])) { $IdentityLookup[$incRoles[0]] } else { $incRoles[0] }
+                         if ($incRoles.Count -gt 1) { "Role: $n + $($incRoles.Count - 1) more" } else { "Role: $n" }
+                     }
+                     elseif ($incSpecificUsers.Count -gt 0) {
+                         $n = if ($IdentityLookup.ContainsKey($incSpecificUsers[0])) { $IdentityLookup[$incSpecificUsers[0]] } else { $incSpecificUsers[0] }
+                         if ($incSpecificUsers.Count -gt 1) { "$n + $($incSpecificUsers.Count - 1) more user(s)" } else { $n }
+                     }
+                     else { 'Not configured' }
+        $whoSubItems = [System.Collections.Generic.List[string]]::new()
+        $totalExcl = $excUsers.Count + $excGroups.Count + $excRoles.Count
+        if ($totalExcl -gt 0) { $whoSubItems.Add("Excl: $totalExcl identit$(if ($totalExcl -ne 1) { 'ies' } else { 'y' })") }
+
+        # ── Condition nodes ──
+        $condNodes   = [System.Collections.Generic.List[object]]::new()
+        $clientTypes = @($Policy.conditions.clientAppTypes ?? @())
+        if ($clientTypes.Count -gt 0) {
+            $items = if ($clientTypes -contains 'all') { @('All client types') } else { $clientTypes }
+            $condNodes.Add(@{ title = 'Which client apps?'; items = $items })
+        }
+        $plat = $Policy.conditions.platforms
+        if ($plat -and ($plat.includePlatforms ?? @()).Count -gt 0) {
+            $pp    = @($plat.includePlatforms)
+            $items = if ($pp -contains 'all') { @('All platforms') } else { $pp }
+            $condNodes.Add(@{ title = 'Which devices?'; items = $items })
+        }
+        $loc = $Policy.conditions.locations
+        if ($loc) {
+            $li = @($loc.includeLocations ?? @())
+            $le = @($loc.excludeLocations ?? @())
+            if ($li.Count -gt 0 -or $le.Count -gt 0) {
+                $items = @()
+                if     ($li -contains 'All')        { $items += 'Include: All' }
+                elseif ($li -contains 'AllTrusted') { $items += 'Include: Trusted' }
+                elseif ($li.Count -gt 0)            { $items += "Include: $($li.Count) location(s)" }
+                if     ($le -contains 'AllTrusted') { $items += 'Exclude: Trusted Corporate Network' }
+                elseif ($le.Count -gt 0)            { $items += "Exclude: $($le.Count) location(s)" }
+                $condNodes.Add(@{ title = 'From where?'; items = $items })
+            }
+        }
+        $sir   = @($Policy.conditions.signInRiskLevels  ?? @())
+        $urisk = @($Policy.conditions.userRiskLevels    ?? @())
+        $irisk = @($Policy.conditions.insiderRiskLevels ?? @())
+        if ($sir.Count   -gt 0) { $condNodes.Add(@{ title = 'Sign-in risk'; items = $sir   }) }
+        if ($urisk.Count -gt 0) { $condNodes.Add(@{ title = 'User risk';    items = $urisk }) }
+        if ($irisk.Count -gt 0) { $condNodes.Add(@{ title = 'Insider risk'; items = $irisk }) }
+        $devs = $Policy.conditions.devices
+        if ($devs -and $devs.deviceFilter -and $devs.deviceFilter.mode) {
+            $condNodes.Add(@{ title = 'Device filter'; items = @("$($devs.deviceFilter.mode): filter applied") })
+        }
+        $af = @(if ($Policy.conditions.authenticationFlows) { $Policy.conditions.authenticationFlows.transferMethods ?? @() } else { @() })
+        if ($af.Count -gt 0) { $condNodes.Add(@{ title = 'Auth flow'; items = $af }) }
+
+        # ── Grant / Outcome ──
+        $gc         = $Policy.grantControls
+        $isBlock    = ($gc.builtInControls ?? @()) -contains 'block'
+        $hasGrant   = $gc -and ($gc.builtInControls ?? @()).Count -gt 0
+        $grantStr   = Format-GrantControls   -Policy $Policy
+        $sessionStr = Format-SessionControls -Policy $Policy
+        $hasSession = $sessionStr -and $sessionStr -ne 'None'
+        $grantTitle = if ($isBlock) { 'Block Access' }
+                      elseif (-not $hasGrant -and $hasSession) { 'Session Controls' }
+                      else { $grantStr }
+        $grantItems = [System.Collections.Generic.List[string]]::new()
+        if ($gc) {
+            foreach ($ctrl in ($gc.builtInControls ?? @())) { $grantItems.Add($ctrl) }
+            if ($gc.authenticationStrength) { $grantItems.Add("Auth Strength: $($gc.authenticationStrength.displayName)") }
+            if ($gc.operator -and $grantItems.Count -gt 1) { $grantItems.Add("Operator: $($gc.operator)") }
+        }
+        if (-not $hasGrant -and $hasSession) {
+            foreach ($sp in ($sessionStr -split ', ')) { $grantItems.Add($sp) }
+        }
+        if ($isReportOnly) { $grantItems.Add('(not enforced — report only)') }
+
+        # ── Assemble HTML ──
+        $pName = $enc::HtmlEncode($Policy.displayName)
+        $sb    = [System.Text.StringBuilder]::new()
+
+        [void]$sb.Append('<div class="ftree">')
+
+        # 1. Policy node
+        [void]$sb.Append("<div class='fn fn-policy'><div class='fn-type'>Policy</div><div class='fn-title'>$pName</div><div class='fn-sub' style='text-align:center;margin-top:6px'>$stateBadge</div></div>")
+        [void]$sb.Append('<div class="ftree-vc"></div>')
+
+        # 2. WHAT + WHO row
+        $appSubHtml = ($appSubItems | ForEach-Object { "<div style='color:var(--text-muted);font-size:0.68rem'>$($enc::HtmlEncode($_))</div>" }) -join ''
+        $whoSubHtml = ($whoSubItems | ForEach-Object { "<div style='color:var(--text-muted);font-size:0.68rem'>$($enc::HtmlEncode($_))</div>" }) -join ''
+        [void]$sb.Append('<div class="ftree-row">')
+        [void]$sb.Append("<div class='fn fn-target'><div class='fn-type'>&#x2601; Targets (What)</div><div class='fn-title'>$($enc::HtmlEncode($appTitle))</div><div class='fn-sub'>$appSubHtml</div></div>")
+        [void]$sb.Append("<div class='fn fn-who'><div class='fn-type'>&#x1F464; Applies To (Who)</div><div class='fn-title'>$($enc::HtmlEncode($whoTitle))</div><div class='fn-sub'>$whoSubHtml</div></div>")
+        [void]$sb.Append('</div>')
+        [void]$sb.Append('<div class="ftree-vc"></div>')
+
+        # 3. Conditions (optional)
+        if ($condNodes.Count -gt 0) {
+            $condCountLabel = "$($condNodes.Count) condition$(if ($condNodes.Count -ne 1) { 's' }) checked"
+            [void]$sb.Append("<div class='fn fn-decision'><div class='fn-type'>&#x1F50D; Decision</div><div class='fn-title'>Evaluate Conditions</div><div class='fn-sub' style='text-align:center'>$condCountLabel</div></div>")
+            [void]$sb.Append('<div class="ftree-vc"></div>')
+            [void]$sb.Append('<div class="ftree-conds">')
+            foreach ($cn in $condNodes) {
+                $itemsHtml = ($cn.items | ForEach-Object { "<div>$($enc::HtmlEncode($_))</div>" }) -join ''
+                [void]$sb.Append("<div class='fn fn-cond'><div class='fn-type'>&#x26A0; Condition</div><div class='fn-title'>$($enc::HtmlEncode($cn.title))</div><div class='fn-sub'>$itemsHtml</div></div>")
+            }
+            [void]$sb.Append('</div>')
+            [void]$sb.Append('<div class="ftree-vc"></div>')
+        }
+
+        # 4. Grant/Decision node
+        $grantNodeCls   = if ($isBlock) { 'fn-block' } elseif (-not $hasGrant -and $hasSession) { 'fn-session' } else { 'fn-grant' }
+        $grantItemsHtml = ($grantItems | ForEach-Object { "<div>$($enc::HtmlEncode($_))</div>" }) -join ''
+        [void]$sb.Append("<div class='fn $grantNodeCls'><div class='fn-type'>&#x2696; Decision</div><div class='fn-title'>$($enc::HtmlEncode($grantTitle))</div><div class='fn-sub'>$grantItemsHtml</div></div>")
+        [void]$sb.Append('<div class="ftree-vc"></div>')
+
+        # 5. Outcomes
+        if ($isBlock) {
+            $note = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>Access blocked by policy</div>' }
+            [void]$sb.Append('<div class="ftree-outcomes">')
+            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-notmet'>BLOCKED</div><div class='ftree-vc-short'></div><div class='fn fn-deny'><div class='fn-type'>&#x26D4; Outcome</div><div class='fn-title'>Access Denied</div><div class='fn-sub'>$note</div></div></div>")
+            [void]$sb.Append('</div>')
+        } elseif (-not $hasGrant -and $hasSession) {
+            $note   = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>Session controls are enforced</div>' }
+            $detail = "<div>$($enc::HtmlEncode($sessionStr))</div>"
+            [void]$sb.Append('<div class="ftree-outcomes">')
+            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-applied'>APPLIED</div><div class='ftree-vc-short'></div><div class='fn fn-session'><div class='fn-type'>&#x1F4CB; Outcome</div><div class='fn-title'>Access w/ Session Controls</div><div class='fn-sub'>$note$detail</div></div></div>")
+            [void]$sb.Append('</div>')
+        } else {
+            $okNote   = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>User can access after meeting controls</div>' }
+            $denyNote = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>Controls not satisfied</div>' }
+            [void]$sb.Append('<div class="ftree-outcomes">')
+            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-sat'>SATISFIED</div><div class='ftree-vc-short'></div><div class='fn fn-ok'><div class='fn-type'>&#x2705; Outcome</div><div class='fn-title'>Access Granted</div><div class='fn-sub'>$okNote</div></div></div>")
+            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-notmet'>NOT MET</div><div class='ftree-vc-short'></div><div class='fn fn-deny'><div class='fn-type'>&#x26D4; Outcome</div><div class='fn-title'>Access Denied</div><div class='fn-sub'>$denyNote</div></div></div>")
+            [void]$sb.Append('</div>')
+        }
+
+        [void]$sb.Append('</div>') # end .ftree
+        return $sb.ToString()
+    }
+
+    # Resolve user/group/role GUIDs to display names for the visualizer
+    $identityLookup = @{}
+    try {
+        $identityLookup = Resolve-CAPolicyIdentities -Policies $policies
+        $authCtxKeys = @($identityLookup.Keys | Where-Object { $_ -match '^c\d+$' })
+        Write-Host "[CA-BaselineAuditor] Resolved $($identityLookup.Count) identities for visualizer (auth contexts: $($authCtxKeys.Count): $($authCtxKeys -join ', '))" -ForegroundColor DarkGray
+    } catch {
+        Write-Host "[CA-BaselineAuditor] Identity resolution failed: $_" -ForegroundColor Yellow
+    }
+
+    $vizCards           = [System.Text.StringBuilder]::new()
+    $vizCountEnabled    = 0
+    $vizCountReportOnly = 0
+    $vizCountDisabled   = 0
+    foreach ($p in ($policies | Sort-Object displayName)) {
+        switch ($p.state) {
+            'enabled'                          { $vizCountEnabled++ }
+            'enabledForReportingButNotEnforced' { $vizCountReportOnly++ }
+            'disabled'                         { $vizCountDisabled++ }
+        }
+        [void]$vizCards.Append((Format-PolicyVizCard -Policy $p -IdentityLookup $identityLookup))
+    }
+
+    $secViz = @"
+<section id="visualizer">
+<h2>Policy Flow Visualizer ($($policies.Count) policies)</h2>
+<div class="filter-bar">
+  <input type="text" id="vizFilter" placeholder="Filter by name..." oninput="filterViz()">
+  <select id="vizStateFilter" onchange="filterViz()">
+    <option value="">All States ($($policies.Count))</option>
+    <option value="Enabled">Enabled ($vizCountEnabled)</option>
+    <option value="Report-Only">Report-Only ($vizCountReportOnly)</option>
+    <option value="Disabled">Disabled ($vizCountDisabled)</option>
+  </select>
+</div>
+<div class="viz-grid" id="vizGrid">
+$($vizCards.ToString())
+</div>
+</section>
+<!-- Policy Flow Modal -->
+<div class="flow-modal" id="flowModal">
+  <div class="flow-backdrop" onclick="closeFlowModal()"></div>
+  <div class="flow-box">
+    <div class="flow-titlebar">
+      <h3 id="flowModalTitle">Policy Flow</h3>
+      <button class="flow-close-btn" onclick="closeFlowModal()">&#x2715; Close</button>
+    </div>
+    <div class="flow-scroll">
+      <div id="flowModalBody"></div>
+    </div>
+  </div>
+</div>
+"@
+
     # ═══════════════════════════════════════════════════════════════════
     # JavaScript
     # ═══════════════════════════════════════════════════════════════════
@@ -786,6 +1361,32 @@ document.querySelectorAll('nav a').forEach(function(link) {
     applyNavHeight();
     window.addEventListener('resize', applyNavHeight);
 })();
+function filterViz() {
+    var text  = document.getElementById('vizFilter').value.toLowerCase();
+    var state = document.getElementById('vizStateFilter').value;
+    document.querySelectorAll('#vizGrid .viz-card').forEach(function(c) {
+        var matchText  = !text  || c.textContent.toLowerCase().includes(text);
+        var matchState = !state || c.dataset.state === state;
+        c.style.display = (matchText && matchState) ? '' : 'none';
+    });
+}
+// ── Policy Flow Modal ──
+function openFlowModal(btn) {
+    var card  = btn.closest('.viz-card');
+    var title = card.querySelector('.viz-name').textContent;
+    var data  = card.querySelector('.viz-flow-data');
+    document.getElementById('flowModalTitle').textContent = title;
+    document.getElementById('flowModalBody').innerHTML = data
+        ? data.innerHTML
+        : '<p style="color:var(--text-muted);padding:20px">No flow data available.</p>';
+    document.getElementById('flowModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+function closeFlowModal() {
+    document.getElementById('flowModal').classList.remove('open');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeFlowModal(); });
 '@
 
     # ═══════════════════════════════════════════════════════════════════
@@ -803,7 +1404,7 @@ document.querySelectorAll('nav a').forEach(function(link) {
 <body>
 <div class="header">
     <h1>&#x1F6E1;&#xFE0F; Conditional Access Baseline Audit</h1>
-    <div class="meta">$([System.Web.HttpUtility]::HtmlEncode($tenantName)) ($($tenantCtx.TenantDomain)) &mdash; Generated $reportDate</div>
+    <div class="meta">$([System.Web.HttpUtility]::HtmlEncode($tenantName)) ($($tenantCtx.TenantDomain)) &mdash; Generated $reportDate &mdash; Baseline: <strong>$([System.Web.HttpUtility]::HtmlEncode($activeBaseline))</strong></div>
 </div>
 <nav>
     <a href="#summary" class="active">Summary</a>
@@ -812,6 +1413,7 @@ document.querySelectorAll('nav a').forEach(function(link) {
     <a href="#inventory">Policy Inventory</a>
     <a href="#gap-analysis">Gap Analysis</a>
     <a href="#recommendations">Recommendations</a>
+    <a href="#visualizer">Visualizer</a>
 </nav>
 <div class="container">
 $sec1
@@ -820,6 +1422,7 @@ $sec2
 $sec3
 $sec4
 $sec7
+$secViz
 </div>
 <div class="footer">
     CA-BaselineAuditor v1.0.0 &mdash; Baseline: Kenneth van Surksum October 2025 &mdash; Generated with PowerShell $($PSVersionTable.PSVersion)
