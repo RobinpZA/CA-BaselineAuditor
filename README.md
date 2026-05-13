@@ -2,13 +2,16 @@
 
 Audits your Microsoft Entra Conditional Access policies against **four industry baselines** and generates a self-contained HTML gap-analysis report with an interactive policy flow visualizer.
 
+A **browser-based portal** is included — launch it with a single command, sign in to Microsoft 365, configure your audit options, and view results without touching the command line again.
+
 ## Features
 
+- **Web Portal** — Local browser UI (`http://127.0.0.1:8080`) for sign-in, audit configuration, results summary, and report download
 - **Multi-Baseline Support** — Audit against VanSurksum, CISA SCuBA, Maester, CIS M365, or all four simultaneously with per-baseline scoring
 - **Weighted Scoring Engine** — Matches tenant policies against baseline policies across categories with partial-match detection
 - **License-Aware Filtering** — Automatically detects P1/P2/Intune/MDCA licensing and marks inapplicable policies as N/A
 - **Device Platform Analysis** — Enumerates Entra devices (+ Intune if scope consented) to validate platform-specific policies
-- **Security Posture Checks** — 9 automated checks (break-glass, admin coverage, guest policies, named locations, auth methods, exclusions, report-only age, conflicts, security defaults)
+- **Security Posture Checks** — 9 automated tenant-level checks (break-glass, admin coverage, guest policies, named locations, auth methods, exclusions, report-only age, conflicts, security defaults)
 - **Policy Flow Visualizer** — Interactive per-policy flow diagrams showing targets, conditions, grant controls, and outcomes with color-coded node types
 - **Actionable Recommendations** — Prioritised by severity with effort estimates (Quick Win / Moderate / Complex)
 - **Self-Contained HTML Report** — Dark theme, interactive tables with filtering/search, compliance score ring, 7 report sections
@@ -44,7 +47,31 @@ Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
 
 ## Quick Start
 
-### Interactive Authentication
+### Web Portal (Recommended)
+
+The portal starts a local HTTP server on `127.0.0.1`, opens your browser automatically, and blocks the PowerShell session until you click **✕ Close**.
+
+```powershell
+Import-Module .\CA-BaselineAuditor.psd1
+
+Start-CABaselineAuditorPortal
+```
+
+From the portal you can:
+
+1. **Connect** — sign in via interactive Microsoft Graph browser authentication
+2. **Configure** — choose a baseline (VanSurksum / CISA / Maester / CIS / All) and toggle options
+3. **Run Audit** — results appear with a compliance score ring, matched/partial/missing counts, and a tenant security posture bar
+4. **View Full Report** — opens the full HTML report in a new browser tab
+5. **Download Report** — saves the report file locally via the browser's Save dialog
+6. **Sign Out** — disconnects the Microsoft Graph session and returns to the connect screen
+
+```powershell
+# Use a custom port if 8080 is already in use
+Start-CABaselineAuditorPortal -Port 9090
+```
+
+### Command Line
 
 ```powershell
 Import-Module .\CA-BaselineAuditor.psd1
@@ -113,6 +140,12 @@ Export-CABaselineReport -AuditData ([PSCustomObject]@{
 }) -OutputPath '.\report.html' -OpenReport
 ```
 
+### Parameters for Start-CABaselineAuditorPortal
+
+| Parameter | Description |
+|---|---|
+| `-Port` | Starting port for the local server (default `8080`). Automatically tries the next available port up to `Port+9`. |
+
 ### Parameters for Invoke-CABaselineAudit
 
 | Parameter | Description |
@@ -128,7 +161,7 @@ Export-CABaselineReport -AuditData ([PSCustomObject]@{
 ## Report Sections
 
 1. **Executive Summary** — Compliance score ring, matched/partial/missing/N/A counts, per-baseline score cards (when using `All`)
-2. **Security Posture Findings** — 9 security checks with pass/warning/fail status
+2. **Security Posture Findings** — 9 tenant-level security checks with pass/warning/fail status (baseline-independent)
 3. **Licensing & Feature Detection** — License availability with upgrade recommendations
 4. **Current Policy Inventory** — Searchable/filterable table of all tenant policies
 5. **Baseline Gap Analysis** — Per-policy comparison grouped by category with status badges and baseline source filter
@@ -169,6 +202,33 @@ User and group GUIDs are resolved to display names automatically.
 | Device | 19 | CAD | Compliance, FIDO2, managed devices, Windows/macOS/Linux/iOS/Android |
 | Location | 6 | CAL | Trusted locations, country blocks, registration restrictions |
 
+## Module Structure
+
+```
+CA-BaselineAuditor/
+├── Public/
+│   ├── Start-CABaselineAuditorPortal.ps1   # Web portal entry point
+│   ├── Invoke-CABaselineAudit.ps1          # Main audit orchestrator
+│   ├── Connect-CABaselineAuditor.ps1       # Graph authentication
+│   ├── Export-CABaselineReport.ps1         # HTML report generator
+│   └── ...                                 # Other public functions
+├── Private/
+│   ├── Server/
+│   │   ├── Start-AuditorServer.ps1         # TCP listener loop
+│   │   ├── Invoke-AuditorRouter.ps1        # HTTP request router & API handlers
+│   │   └── Write-AuditorResponse.ps1       # HTTP response helpers
+│   └── ...                                 # Audit logic functions
+├── Assets/
+│   └── portal/
+│       ├── index.html                      # SPA shell
+│       ├── style.css                       # Dark theme (Poppins, blue accent)
+│       └── app.js                          # SPA logic
+├── Baselines/                              # Baseline JSON files
+├── Reports/                                # Generated HTML reports
+└── Config/
+    └── auth.example.json                   # App registration auth template
+```
+
 ## Building & Testing
 
 ```powershell
@@ -193,3 +253,4 @@ MIT
 - [Maester](https://maester.dev/) — MT.1xxx Conditional Access Test Suite
 - [CIS Benchmarks](https://www.cisecurity.org/benchmark/microsoft_365) — M365 Foundations Benchmark
 - Microsoft Graph API — Conditional Access templates
+

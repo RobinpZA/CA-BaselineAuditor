@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CA-BaselineAuditor Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <header class="header">
+      <div class="header-brand">
+        <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+        <span class="header-title">CA&#8209;BaselineAuditor</span>
+      </div>
+
+      <div id="tenant-info" class="header-tenant" style="display:none;">
+        <span class="badge badge-green">Connected</span>
+        <span class="tenant-name" id="tenant-name-text"></span>
+        <span class="connected-as" id="connected-as-text"></span>
+      </div>
+
+      <div style="flex:1;"></div>
+
+      <button id="btn-disconnect" class="btn btn-sign-out btn-sm" style="display:none;"
+              title="Sign out and disconnect from Microsoft Graph">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sign Out
+      </button>
+      <button id="btn-close-server" class="btn btn-ghost btn-sm"
+              title="Close the portal server">
+        ✕ Close
+      </button>
+    </header>
+
+    <!-- ── Main ────────────────────────────────────────────────────────────── -->
+    <main class="main">
+
+      <!-- ── View: Connect ─────────────────────────────────────────────────── -->
+      <div id="view-connect" class="view">
+        <div class="connect-screen">
+          <div class="connect-card">
+            <div class="connect-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
+              </svg>
+            </div>
+            <div class="connect-title">Connect to Microsoft 365</div>
+            <div class="connect-subtitle">
+              Sign in with an account that has permission to read Conditional Access
+              policies and tenant information. A browser sign-in window will open.
+            </div>
+
+            <div id="connect-error" class="connect-error" style="display:none;"></div>
+
+            <div id="connect-idle">
+              <button id="btn-connect" class="btn btn-primary btn-connect">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                Connect
+              </button>
+              <div class="connect-hint">
+                Interactive browser sign-in via Microsoft Graph
+              </div>
+            </div>
+
+            <div id="connect-progress" class="connect-progress" style="display:none;">
+              <div class="spinner"></div>
+              <span id="connect-progress-text">Opening sign-in window…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── View: Audit ───────────────────────────────────────────────────── -->
+      <div id="view-audit" class="view">
+
+        <!-- Config state -->
+        <div id="audit-config">
+          <div class="view-header">
+            <h2>Baseline Audit</h2>
+            <span id="audit-status-badge" class="badge badge-gray">Idle</span>
+          </div>
+
+          <div class="config-card">
+            <h3>Audit Configuration</h3>
+            <div class="config-grid">
+              <div class="config-field">
+                <label for="sel-baseline">Baseline</label>
+                <select id="sel-baseline" class="config-select">
+                  <option value="VanSurksum">VanSurksum (Recommended)</option>
+                  <option value="CISA">CISA SCuBA</option>
+                  <option value="CIS">CIS M365 Foundations</option>
+                  <option value="Maester">Maester MT</option>
+                  <option value="All">All Baselines</option>
+                </select>
+              </div>
+
+              <div class="config-field" style="justify-content:flex-end;">
+                <!-- spacer -->
+              </div>
+
+              <div class="config-field" style="grid-column:1/-1;">
+                <label>Options</label>
+                <div class="toggle-group">
+                  <label class="toggle-row">
+                    <input type="checkbox" id="chk-include-disabled" />
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label-text">Include disabled policies in comparison</span>
+                  </label>
+                  <label class="toggle-row">
+                    <input type="checkbox" id="chk-skip-devices" />
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label-text">Skip device inventory (faster)</span>
+                  </label>
+                  <label class="toggle-row">
+                    <input type="checkbox" id="chk-skip-templates" />
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label-text">Skip Microsoft CA template comparison</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <button id="btn-run-audit" class="btn btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Run Audit
+            </button>
+          </div>
+        </div>
+
+        <!-- Running state -->
+        <div id="audit-running" style="display:none;">
+          <div class="running-card">
+            <div class="spinner lg" style="margin: 0 auto 20px;"></div>
+            <h3>Audit in Progress</h3>
+            <div class="running-pulse">
+              <div class="running-dot"></div>
+              <div class="running-dot"></div>
+              <div class="running-dot"></div>
+              <span id="running-label">Fetching policies…</span>
+            </div>
+            <p>
+              This may take a minute or two. The audit queries Conditional Access policies,
+              tenant context, device inventory and compares against the selected baseline.
+            </p>
+          </div>
+        </div>
+
+        <!-- Results state -->
+        <div id="audit-results" style="display:none;">
+          <div class="view-header">
+            <h2>Audit Results</h2>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span id="result-baseline-badge" class="badge badge-blue"></span>
+              <span id="result-date-badge" class="badge badge-gray"></span>
+            </div>
+          </div>
+
+          <div id="score-wrap" class="score-wrap">
+            <div class="score-ring">
+              <svg width="90" height="90" viewBox="0 0 90 90">
+                <circle cx="45" cy="45" r="38" fill="none" stroke="var(--border)" stroke-width="8"/>
+                <circle id="score-arc" cx="45" cy="45" r="38" fill="none"
+                        stroke="var(--accent)" stroke-width="8"
+                        stroke-dasharray="238.76" stroke-dashoffset="238.76"
+                        stroke-linecap="round" style="transition:stroke-dashoffset .8s ease;"/>
+              </svg>
+              <div class="score-text" id="score-pct">0%</div>
+            </div>
+            <div class="score-details">
+              <h3 id="score-headline">Compliance Score</h3>
+              <p id="score-subtext"></p>
+            </div>
+          </div>
+
+          <div class="summary-grid" id="summary-grid"></div>
+
+          <div id="posture-bar-wrap" class="posture-bar" style="display:none;">
+            <div class="posture-label">
+              <strong>Tenant Security Posture</strong><br/>
+              <span class="dim" id="posture-desc"></span>
+            </div>
+            <div class="posture-bar-track">
+              <div class="posture-bar-fill" id="posture-fill" style="width:0%"></div>
+            </div>
+            <span class="badge badge-blue" id="posture-badge"></span>
+          </div>
+
+          <div class="result-actions">
+            <button id="btn-view-report" class="btn btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              View Full Report
+            </button>
+            <button id="btn-download-report" class="btn btn-outline">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download Report
+            </button>
+            <button id="btn-new-audit" class="btn btn-outline">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.51"/>
+              </svg>
+              Run New Audit
+            </button>
+          </div>
+        </div>
+
+        <!-- Error state -->
+        <div id="audit-error" style="display:none;">
+          <div class="view-header">
+            <h2>Audit Failed</h2>
+          </div>
+          <div class="error-card">
+            <h4>An error occurred during the audit</h4>
+            <p id="audit-error-text"></p>
+          </div>
+          <button id="btn-retry-audit" class="btn btn-primary">Try Again</button>
+        </div>
+
+      </div><!-- /view-audit -->
+
+    </main><!-- /main -->
+  </div><!-- /app -->
+
+  <!-- ── Loading overlay ─────────────────────────────────────────────────── -->
+  <div id="loading-overlay" class="hidden">
+    <div class="spinner lg"></div>
+  </div>
+
+  <!-- ── Toast container ─────────────────────────────────────────────────── -->
+  <div id="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

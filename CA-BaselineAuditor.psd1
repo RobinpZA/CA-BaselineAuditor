@@ -33,6 +33,9 @@
 
         # Main orchestrator
         'Invoke-CABaselineAudit'
+
+        # Web portal
+        'Start-CABaselineAuditorPortal'
     )
 
     CmdletsToExport   = @()

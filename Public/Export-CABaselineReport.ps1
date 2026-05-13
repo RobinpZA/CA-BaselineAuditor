@@ -75,25 +75,25 @@ function Export-CABaselineReport {
     # ═══════════════════════════════════════════════════════════════════
     $css = @'
 :root {
-    --bg-primary: #070e1b;
-    --bg-secondary: #0c1526;
-    --bg-card: #0f1b2d;
-    --bg-hover: #182840;
-    --text-primary: #dde6f0;
-    --text-secondary: #8aa6c2;
-    --text-muted: #4a6380;
-    --border: #1b2d44;
-    --border-subtle: #101f32;
+    --bg-primary: #0a0c0f;
+    --bg-secondary: #0f1219;
+    --bg-card: #141820;
+    --bg-hover: #1a1f2e;
+    --text-primary: #e8edf5;
+    --text-secondary: #8896b0;
+    --text-muted: #4d5d78;
+    --border: #1e2638;
+    --border-subtle: #141c2a;
     --accent-blue: #3b82f6;
-    --accent-green: #22c55e;
-    --accent-yellow: #eab308;
+    --accent-green: #10b981;
+    --accent-yellow: #f59e0b;
     --accent-red: #ef4444;
     --accent-orange: #f97316;
     --accent-purple: #a855f7;
     --accent-cyan: #06b6d4;
-    --font-display: 'Syne', system-ui, sans-serif;
-    --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
-    --font-mono: 'IBM Plex Mono', 'Cascadia Code', 'Consolas', monospace;
+    --font-display: 'Poppins', system-ui, sans-serif;
+    --font-body: 'Poppins', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
     --shadow-card: 0 4px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1418,7 +1418,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <title>CA Baseline Audit — $([System.Web.HttpUtility]::HtmlEncode($tenantName))</title>
 <style>$css</style>
 </head>
