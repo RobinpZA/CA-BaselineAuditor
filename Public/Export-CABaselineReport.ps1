@@ -209,45 +209,8 @@ tbody tr:hover { background: rgba(59,130,246,0.05); }
 .flow-close-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); font-size: 0.82rem; cursor: pointer; padding: 5px 12px; border-radius: 6px; transition: all 0.15s; flex-shrink: 0; }
 .flow-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .flow-scroll { overflow-y: auto; overflow-x: auto; padding: 32px 24px; display: flex; justify-content: center; }
-/* ── Flow diagram tree ── */
-.ftree { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 540px; }
-.ftree-vc { width: 2px; height: 32px; background: var(--border); flex-shrink: 0; }
-.ftree-vc-short { width: 2px; height: 20px; background: var(--border); flex-shrink: 0; }
-.ftree-row { display: flex; gap: 20px; justify-content: center; align-items: flex-start; }
-.ftree-conds { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: 820px; }
-.ftree-outcomes { display: flex; gap: 24px; justify-content: center; align-items: flex-start; }
-.ftree-ob { display: flex; flex-direction: column; align-items: center; gap: 0; }
-.ftree-ob-label { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.09em; padding: 4px 14px; border-radius: 999px; white-space: nowrap; }
-.ftree-sat { background: rgba(34,197,94,0.15); color: var(--accent-green); border: 1px dashed rgba(34,197,94,0.45); }
-.ftree-notmet { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 1px dashed rgba(239,68,68,0.45); }
-.ftree-applied { background: rgba(6,182,212,0.15); color: var(--accent-cyan); border: 1px dashed rgba(6,182,212,0.45); }
-/* Flow node base */
-.fn { border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; width: 200px; flex-shrink: 0; text-align: center; box-sizing: border-box; }
-.fn-type { font-size: 0.56rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; margin-bottom: 6px; }
-.fn-title { font-size: 0.84rem; font-weight: 600; line-height: 1.35; }
-.fn-sub { font-size: 0.7rem; color: var(--text-secondary); margin-top: 6px; line-height: 1.55; text-align: left; }
-.fn-sub div { padding: 2px 0; }
-/* Node colour variants */
-.fn-policy { background: linear-gradient(135deg,rgba(59,130,246,0.14),rgba(99,102,241,0.14)); border-color: #6366f1; }
-.fn-policy .fn-type { color: #818cf8; }
-.fn-target { background: rgba(6,182,212,0.08); border-color: #0891b2; }
-.fn-target .fn-type { color: #22d3ee; }
-.fn-who { background: rgba(236,72,153,0.1); border-color: #be185d; }
-.fn-who .fn-type { color: #f472b6; }
-.fn-decision { background: rgba(168,85,247,0.1); border-color: #9333ea; }
-.fn-decision .fn-type { color: #c084fc; }
-.fn-cond { background: rgba(234,179,8,0.08); border-color: #b45309; }
-.fn-cond .fn-type { color: #f59e0b; }
-.fn-grant { background: rgba(168,85,247,0.12); border-color: #7c3aed; }
-.fn-grant .fn-type { color: #a78bfa; }
-.fn-block { background: rgba(239,68,68,0.1); border-color: #dc2626; }
-.fn-block .fn-type { color: #f87171; }
-.fn-ok { background: rgba(34,197,94,0.1); border-color: #16a34a; }
-.fn-ok .fn-type { color: #4ade80; }
-.fn-deny { background: rgba(239,68,68,0.1); border-color: #dc2626; }
-.fn-deny .fn-type { color: #f87171; }
-.fn-session { background: rgba(6,182,212,0.1); border-color: #0891b2; }
-.fn-session .fn-type { color: #22d3ee; }
+/* ── Flow diagram SVG ── */
+.flow-svg-wrap { display: flex; justify-content: center; overflow-x: auto; padding: 8px 0; }
 /* View flow button on viz-cards */
 .viz-flow-btn { background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; padding: 3px 10px; border-radius: 6px; font-size: 0.71rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; margin-left: auto; }
 .viz-flow-btn:hover { background: rgba(99,102,241,0.22); border-color: #818cf8; color: #e0e7ff; }
@@ -973,7 +936,8 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
         $outcomeGrant   = "<div class='viz-item'>$outcomeIcon $($enc::HtmlEncode($grantStr))</div>"
         $outcomeSess    = if ($hasSession) { "<div class='viz-item viz-session'>&#x1F4CB; $($enc::HtmlEncode($sessionStr))</div>" } else { '' }
 
-        $flowDiagHtml   = Format-PolicyFlowDiagram -Policy $Policy -IdentityLookup $IdentityLookup
+        $flowJson        = Format-PolicyFlowJson -Policy $Policy -IdentityLookup $IdentityLookup
+        $flowJsonEncoded = [System.Web.HttpUtility]::HtmlEncode($flowJson)
 
         return @"
 <div class="viz-card$disabledCls" data-state="$($enc::HtmlEncode($stateLabel))">
@@ -1003,22 +967,13 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
       <div class="viz-node-body">$outcomeGrant$outcomeSess</div>
     </div>
   </div>
-  <div class="viz-flow-data" style="display:none">$flowDiagHtml</div>
+  <div class="viz-flow-data" style="display:none" data-type="json">$flowJsonEncoded</div>
 </div>
 "@
     }
 
-    function Format-PolicyFlowDiagram {
+    function Format-PolicyFlowJson {
         param([object]$Policy, [hashtable]$IdentityLookup = @{})
-
-        $enc          = [System.Web.HttpUtility]
-        $isReportOnly = $Policy.state -eq 'enabledForReportingButNotEnforced'
-        $stateBadge   = switch ($Policy.state) {
-            'enabled'                          { '<span class="badge badge-green">Enabled</span>' }
-            'enabledForReportingButNotEnforced' { '<span class="badge badge-yellow">Report-Only</span>' }
-            'disabled'                         { '<span class="badge badge-gray">Disabled</span>' }
-            default                            { "<span class='badge badge-gray'>$($Policy.state)</span>" }
-        }
 
         # ── WHAT (Apps) ──
         $wellKnown  = Get-WellKnownAppId
@@ -1026,29 +981,22 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
         $incApps    = @($appsCond.includeApplications ?? @())
         $incActions = @($appsCond.includeUserActions ?? @())
         $incAuthCtx = @($appsCond.includeAuthenticationContextClassReferences ?? @())
-        $appTitle  = if     ($incApps -contains 'All')       { 'All Cloud Apps' }
-                     elseif ($incApps -contains 'Office365') { 'Office 365' }
-                     elseif ($incApps -contains 'None')      { 'No Cloud Apps' }
-                     elseif ($incApps.Count -eq 1)           { if ($wellKnown.ContainsKey($incApps[0])) { $wellKnown[$incApps[0]] } else { $incApps[0] } }
-                     elseif ($incApps.Count -gt 1)           { "$($incApps.Count) applications" }
-                     elseif ($incActions.Count -gt 0)        { "User Action: $($incActions[0])$(if ($incActions.Count -gt 1) { " + $($incActions.Count - 1) more" })" }
-                     elseif ($incAuthCtx.Count -gt 0)        {
-                         $ctxId   = if ($incAuthCtx[0] -is [string]) { $incAuthCtx[0] } else { $incAuthCtx[0].id ?? $incAuthCtx[0].ToString() }
-                         $ctxName = if ($IdentityLookup.ContainsKey($ctxId)) { $IdentityLookup[$ctxId] } else { $ctxId }
-                         if ($incAuthCtx.Count -gt 1) { "Auth Context: $ctxName + $($incAuthCtx.Count - 1) more" } else { "Auth Context: $ctxName" }
-                     }
-                     else                                    { 'Not configured' }
-        $appSubItems = [System.Collections.Generic.List[string]]::new()
-        # User actions already surfaced in title when primary; show all as sub-items too
-        foreach ($a in $incActions) { $appSubItems.Add("Action: $a") }
-        # Auth contexts: list them all as sub-items (title shows the first)
-        foreach ($ctx in $incAuthCtx) {
-            $ctxId   = if ($ctx -is [string]) { $ctx } else { $ctx.id ?? $ctx.ToString() }
-            $ctxName = if ($IdentityLookup.ContainsKey($ctxId)) { $IdentityLookup[$ctxId] } else { $ctxId }
-            $appSubItems.Add("Auth context: $ctxName")
-        }
+        $appTitle   = if     ($incApps -contains 'All')       { 'All Cloud Apps' }
+                      elseif ($incApps -contains 'Office365') { 'Office 365' }
+                      elseif ($incApps -contains 'None')      { 'No Cloud Apps' }
+                      elseif ($incApps.Count -eq 1)           { if ($wellKnown.ContainsKey($incApps[0])) { $wellKnown[$incApps[0]] } else { $incApps[0] } }
+                      elseif ($incApps.Count -gt 1)           { "$($incApps.Count) applications" }
+                      elseif ($incActions.Count -gt 0)        { "Action: $($incActions[0])" }
+                      elseif ($incAuthCtx.Count -gt 0)        {
+                          $ctxId   = if ($incAuthCtx[0] -is [string]) { $incAuthCtx[0] } else { $incAuthCtx[0].id ?? $incAuthCtx[0].ToString() }
+                          $ctxName = if ($IdentityLookup.ContainsKey($ctxId)) { $IdentityLookup[$ctxId] } else { $ctxId }
+                          if ($incAuthCtx.Count -gt 1) { "Auth Context: $ctxName + $($incAuthCtx.Count - 1) more" } else { "Auth Context: $ctxName" }
+                      }
+                      else                                    { 'Not configured' }
+        $whatSub = [System.Collections.Generic.List[string]]::new()
         $excApps = @($appsCond.excludeApplications ?? @())
-        if ($excApps.Count -gt 0) { $appSubItems.Add("Excl: $($excApps.Count) app(s)") }
+        if ($excApps.Count -gt 0) { $whatSub.Add("Excl: $($excApps.Count) app(s)") }
+        foreach ($a in ($incActions | Select-Object -First 2)) { $whatSub.Add("Action: $a") }
 
         # ── WHO (Users) ──
         $usrs      = $Policy.conditions.users
@@ -1074,60 +1022,59 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
                          if ($incSpecificUsers.Count -gt 1) { "$n + $($incSpecificUsers.Count - 1) more user(s)" } else { $n }
                      }
                      else { 'Not configured' }
-        $whoSubItems = [System.Collections.Generic.List[string]]::new()
+        $whoSub    = [System.Collections.Generic.List[string]]::new()
         $totalExcl = $excUsers.Count + $excGroups.Count + $excRoles.Count
-        if ($totalExcl -gt 0) { $whoSubItems.Add("Excl: $totalExcl identit$(if ($totalExcl -ne 1) { 'ies' } else { 'y' })") }
+        if ($totalExcl -gt 0) { $whoSub.Add("Excl: $totalExcl identit$(if ($totalExcl -ne 1) { 'ies' } else { 'y' })") }
 
-        # ── Condition nodes ──
-        $condNodes   = [System.Collections.Generic.List[object]]::new()
+        # ── Conditions ──
+        $condData    = [System.Collections.Generic.List[hashtable]]::new()
         $clientTypes = @($Policy.conditions.clientAppTypes ?? @())
         if ($clientTypes.Count -gt 0) {
             $items = if ($clientTypes -contains 'all') { @('All client types') } else { $clientTypes }
-            $condNodes.Add(@{ title = 'Which client apps?'; items = $items })
+            $condData.Add(@{ title = 'Client apps'; items = @($items) })
         }
         $plat = $Policy.conditions.platforms
         if ($plat -and ($plat.includePlatforms ?? @()).Count -gt 0) {
             $pp    = @($plat.includePlatforms)
             $items = if ($pp -contains 'all') { @('All platforms') } else { $pp }
-            $condNodes.Add(@{ title = 'Which devices?'; items = $items })
+            $condData.Add(@{ title = 'Devices'; items = @($items) })
         }
         $loc = $Policy.conditions.locations
         if ($loc) {
             $li = @($loc.includeLocations ?? @())
             $le = @($loc.excludeLocations ?? @())
             if ($li.Count -gt 0 -or $le.Count -gt 0) {
-                $items = @()
-                if     ($li -contains 'All')        { $items += 'Include: All' }
-                elseif ($li -contains 'AllTrusted') { $items += 'Include: Trusted' }
-                elseif ($li.Count -gt 0)            { $items += "Include: $($li.Count) location(s)" }
-                if     ($le -contains 'AllTrusted') { $items += 'Exclude: Trusted Corporate Network' }
-                elseif ($le.Count -gt 0)            { $items += "Exclude: $($le.Count) location(s)" }
-                $condNodes.Add(@{ title = 'From where?'; items = $items })
+                $locItems = [System.Collections.Generic.List[string]]::new()
+                if     ($li -contains 'All')        { $locItems.Add('Include: All') }
+                elseif ($li -contains 'AllTrusted') { $locItems.Add('Include: Trusted') }
+                elseif ($li.Count -gt 0)            { $locItems.Add("Include: $($li.Count) location(s)") }
+                if     ($le -contains 'AllTrusted') { $locItems.Add('Excl: Trusted network') }
+                elseif ($le.Count -gt 0)            { $locItems.Add("Excl: $($le.Count) location(s)") }
+                $condData.Add(@{ title = 'Locations'; items = @($locItems) })
             }
         }
         $sir   = @($Policy.conditions.signInRiskLevels  ?? @())
         $urisk = @($Policy.conditions.userRiskLevels    ?? @())
         $irisk = @($Policy.conditions.insiderRiskLevels ?? @())
-        if ($sir.Count   -gt 0) { $condNodes.Add(@{ title = 'Sign-in risk'; items = $sir   }) }
-        if ($urisk.Count -gt 0) { $condNodes.Add(@{ title = 'User risk';    items = $urisk }) }
-        if ($irisk.Count -gt 0) { $condNodes.Add(@{ title = 'Insider risk'; items = $irisk }) }
+        if ($sir.Count   -gt 0) { $condData.Add(@{ title = 'Sign-in risk'; items = @($sir)   }) }
+        if ($urisk.Count -gt 0) { $condData.Add(@{ title = 'User risk';    items = @($urisk) }) }
+        if ($irisk.Count -gt 0) { $condData.Add(@{ title = 'Insider risk'; items = @($irisk) }) }
         $devs = $Policy.conditions.devices
         if ($devs -and $devs.deviceFilter -and $devs.deviceFilter.mode) {
-            $condNodes.Add(@{ title = 'Device filter'; items = @("$($devs.deviceFilter.mode): filter applied") })
+            $condData.Add(@{ title = 'Device filter'; items = @("$($devs.deviceFilter.mode) mode") })
         }
         $af = @(if ($Policy.conditions.authenticationFlows) { $Policy.conditions.authenticationFlows.transferMethods ?? @() } else { @() })
-        if ($af.Count -gt 0) { $condNodes.Add(@{ title = 'Auth flow'; items = $af }) }
+        if ($af.Count -gt 0) { $condData.Add(@{ title = 'Auth flow'; items = @($af) }) }
 
-        # ── Grant / Outcome ──
+        # ── Grant ──
         $gc         = $Policy.grantControls
         $isBlock    = ($gc.builtInControls ?? @()) -contains 'block'
         $hasGrant   = $gc -and ($gc.builtInControls ?? @()).Count -gt 0
         $grantStr   = Format-GrantControls   -Policy $Policy
         $sessionStr = Format-SessionControls -Policy $Policy
         $hasSession = $sessionStr -and $sessionStr -ne 'None'
-        $grantTitle = if ($isBlock) { 'Block Access' }
-                      elseif (-not $hasGrant -and $hasSession) { 'Session Controls' }
-                      else { $grantStr }
+        $grantType  = if ($isBlock) { 'block' } elseif (-not $hasGrant -and $hasSession) { 'session' } else { 'grant' }
+        $grantTitle = if ($isBlock) { 'Block Access' } elseif (-not $hasGrant -and $hasSession) { 'Session Controls' } else { $grantStr }
         $grantItems = [System.Collections.Generic.List[string]]::new()
         if ($gc) {
             foreach ($ctrl in ($gc.builtInControls ?? @())) { $grantItems.Add($ctrl) }
@@ -1137,70 +1084,24 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
         if (-not $hasGrant -and $hasSession) {
             foreach ($sp in ($sessionStr -split ', ')) { $grantItems.Add($sp) }
         }
-        if ($isReportOnly) { $grantItems.Add('(not enforced — report only)') }
+        $isReportOnly = $Policy.state -eq 'enabledForReportingButNotEnforced'
+        if ($isReportOnly) { $grantItems.Add('(report only)') }
 
-        # ── Assemble HTML ──
-        $pName = $enc::HtmlEncode($Policy.displayName)
-        $sb    = [System.Text.StringBuilder]::new()
-
-        [void]$sb.Append('<div class="ftree">')
-
-        # 1. Policy node
-        [void]$sb.Append("<div class='fn fn-policy'><div class='fn-type'>Policy</div><div class='fn-title'>$pName</div><div class='fn-sub' style='text-align:center;margin-top:6px'>$stateBadge</div></div>")
-        [void]$sb.Append('<div class="ftree-vc"></div>')
-
-        # 2. WHAT + WHO row
-        $appSubHtml = ($appSubItems | ForEach-Object { "<div style='color:var(--text-muted);font-size:0.68rem'>$($enc::HtmlEncode($_))</div>" }) -join ''
-        $whoSubHtml = ($whoSubItems | ForEach-Object { "<div style='color:var(--text-muted);font-size:0.68rem'>$($enc::HtmlEncode($_))</div>" }) -join ''
-        [void]$sb.Append('<div class="ftree-row">')
-        [void]$sb.Append("<div class='fn fn-target'><div class='fn-type'>&#x2601; Targets (What)</div><div class='fn-title'>$($enc::HtmlEncode($appTitle))</div><div class='fn-sub'>$appSubHtml</div></div>")
-        [void]$sb.Append("<div class='fn fn-who'><div class='fn-type'>&#x1F464; Applies To (Who)</div><div class='fn-title'>$($enc::HtmlEncode($whoTitle))</div><div class='fn-sub'>$whoSubHtml</div></div>")
-        [void]$sb.Append('</div>')
-        [void]$sb.Append('<div class="ftree-vc"></div>')
-
-        # 3. Conditions (optional)
-        if ($condNodes.Count -gt 0) {
-            $condCountLabel = "$($condNodes.Count) condition$(if ($condNodes.Count -ne 1) { 's' }) checked"
-            [void]$sb.Append("<div class='fn fn-decision'><div class='fn-type'>&#x1F50D; Decision</div><div class='fn-title'>Evaluate Conditions</div><div class='fn-sub' style='text-align:center'>$condCountLabel</div></div>")
-            [void]$sb.Append('<div class="ftree-vc"></div>')
-            [void]$sb.Append('<div class="ftree-conds">')
-            foreach ($cn in $condNodes) {
-                $itemsHtml = ($cn.items | ForEach-Object { "<div>$($enc::HtmlEncode($_))</div>" }) -join ''
-                [void]$sb.Append("<div class='fn fn-cond'><div class='fn-type'>&#x26A0; Condition</div><div class='fn-title'>$($enc::HtmlEncode($cn.title))</div><div class='fn-sub'>$itemsHtml</div></div>")
+        # ── Serialize ──
+        $data = [ordered]@{
+            name  = $Policy.displayName
+            state = switch ($Policy.state) {
+                'enabled'                          { 'enabled' }
+                'enabledForReportingButNotEnforced' { 'reportOnly' }
+                'disabled'                         { 'disabled' }
+                default                            { $Policy.state }
             }
-            [void]$sb.Append('</div>')
-            [void]$sb.Append('<div class="ftree-vc"></div>')
+            what  = [ordered]@{ title = $appTitle; sub = @($whatSub) }
+            who   = [ordered]@{ title = $whoTitle;  sub = @($whoSub)  }
+            conds = @($condData)
+            grant = [ordered]@{ type = $grantType; title = $grantTitle; items = @($grantItems) }
         }
-
-        # 4. Grant/Decision node
-        $grantNodeCls   = if ($isBlock) { 'fn-block' } elseif (-not $hasGrant -and $hasSession) { 'fn-session' } else { 'fn-grant' }
-        $grantItemsHtml = ($grantItems | ForEach-Object { "<div>$($enc::HtmlEncode($_))</div>" }) -join ''
-        [void]$sb.Append("<div class='fn $grantNodeCls'><div class='fn-type'>&#x2696; Decision</div><div class='fn-title'>$($enc::HtmlEncode($grantTitle))</div><div class='fn-sub'>$grantItemsHtml</div></div>")
-        [void]$sb.Append('<div class="ftree-vc"></div>')
-
-        # 5. Outcomes
-        if ($isBlock) {
-            $note = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>Access blocked by policy</div>' }
-            [void]$sb.Append('<div class="ftree-outcomes">')
-            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-notmet'>BLOCKED</div><div class='ftree-vc-short'></div><div class='fn fn-deny'><div class='fn-type'>&#x26D4; Outcome</div><div class='fn-title'>Access Denied</div><div class='fn-sub'>$note</div></div></div>")
-            [void]$sb.Append('</div>')
-        } elseif (-not $hasGrant -and $hasSession) {
-            $note   = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>Session controls are enforced</div>' }
-            $detail = "<div>$($enc::HtmlEncode($sessionStr))</div>"
-            [void]$sb.Append('<div class="ftree-outcomes">')
-            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-applied'>APPLIED</div><div class='ftree-vc-short'></div><div class='fn fn-session'><div class='fn-type'>&#x1F4CB; Outcome</div><div class='fn-title'>Access w/ Session Controls</div><div class='fn-sub'>$note$detail</div></div></div>")
-            [void]$sb.Append('</div>')
-        } else {
-            $okNote   = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>User can access after meeting controls</div>' }
-            $denyNote = if ($isReportOnly) { '<div>Not enforced (report only)</div>' } else { '<div>Controls not satisfied</div>' }
-            [void]$sb.Append('<div class="ftree-outcomes">')
-            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-sat'>SATISFIED</div><div class='ftree-vc-short'></div><div class='fn fn-ok'><div class='fn-type'>&#x2705; Outcome</div><div class='fn-title'>Access Granted</div><div class='fn-sub'>$okNote</div></div></div>")
-            [void]$sb.Append("<div class='ftree-ob'><div class='ftree-ob-label ftree-notmet'>NOT MET</div><div class='ftree-vc-short'></div><div class='fn fn-deny'><div class='fn-type'>&#x26D4; Outcome</div><div class='fn-title'>Access Denied</div><div class='fn-sub'>$denyNote</div></div></div>")
-            [void]$sb.Append('</div>')
-        }
-
-        [void]$sb.Append('</div>') # end .ftree
-        return $sb.ToString()
+        return $data | ConvertTo-Json -Depth 5 -Compress
     }
 
     # Resolve user/group/role GUIDs to display names for the visualizer
@@ -1379,6 +1280,106 @@ document.querySelectorAll('nav a').forEach(function(link) {
     applyNavHeight();
     window.addEventListener('resize', applyNavHeight);
 })();
+function escXml(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function renderFlowSvg(d) {
+    var NW=210,PAD=12,LBL_H=18,DIV_H=8,TTL_H=18,ITEM_H=16,GAP_Y=56,GAP_X=20,SIDE=28;
+    var CC='#374151';
+    var C={policy:['#1c2640','#6366f1','#818cf8'],target:['#0c2231','#0891b2','#22d3ee'],
+           who:['#2a1024','#be185d','#f472b6'],decision:['#1e1040','#9333ea','#c084fc'],
+           cond:['#1f1a08','#b45309','#f59e0b'],grant:['#1a0e3a','#7c3aed','#a78bfa'],
+           block:['#2a0a0a','#dc2626','#f87171'],ok:['#0a2a0e','#16a34a','#4ade80'],
+           deny:['#2a0a0a','#dc2626','#f87171'],session:['#0a2228','#0891b2','#22d3ee']};
+    var LBL={policy:'POLICY',target:'TARGETS',who:'APPLIES TO',decision:'DECISION',
+             cond:'CONDITION',grant:'GRANT',block:'GRANT',ok:'OUTCOME',deny:'OUTCOME',session:'OUTCOME'};
+    var FONT="Poppins,system-ui,sans-serif";
+    function wrap(txt,max){
+        if(!txt)return[''];if(txt.length<=max)return[txt];
+        var words=txt.split(' '),lines=[],cur='';
+        for(var i=0;i<words.length;i++){var w=words[i],test=cur?cur+' '+w:w;
+            if(test.length>max&&cur){lines.push(cur);cur=w;}else{cur=test;}}
+        if(cur)lines.push(cur);
+        if(lines.length>2){lines=lines.slice(0,2);lines[1]=lines[1].replace(/\s+\S+$/,'\u2026');}
+        return lines;}
+    function nodeH(tl,items){return PAD+LBL_H+DIV_H+tl.length*TTL_H+(items.length>0?10+items.length*ITEM_H:8)+PAD;}
+    var levels=[],edges=[];
+    var pTL=wrap(d.name,26);
+    var pItems=d.state!=='enabled'?[d.state==='reportOnly'?'Report-Only':'Disabled']:[];
+    levels.push([{type:'policy',tl:pTL,items:pItems}]);
+    levels.push([{type:'target',tl:wrap(d.what.title,26),items:(d.what.sub||[]).slice(0,3)},
+                 {type:'who',   tl:wrap(d.who.title, 26),items:(d.who.sub ||[]).slice(0,3)}]);
+    edges.push({fl:0,fi:0,tl:1,ti:0});edges.push({fl:0,fi:0,tl:1,ti:1});
+    var prevL=1,prevIs=[0,1];
+    if(d.conds&&d.conds.length>0){
+        levels.push([{type:'decision',tl:['Evaluate Conditions'],items:[d.conds.length+' condition(s) checked']}]);
+        prevIs.forEach(function(i){edges.push({fl:prevL,fi:i,tl:prevL+1,ti:0});});
+        prevL++;prevIs=[0];
+        var cN=d.conds.map(function(c){return{type:'cond',tl:wrap(c.title,26),items:(c.items||[]).slice(0,4)};});
+        levels.push(cN);
+        for(var ci=0;ci<cN.length;ci++)edges.push({fl:prevL,fi:0,tl:prevL+1,ti:ci});
+        prevL++;prevIs=cN.map(function(_,i){return i;});}
+    var gt=d.grant.type;
+    levels.push([{type:gt,tl:wrap(d.grant.title,26),items:(d.grant.items||[]).slice(0,4)}]);
+    prevIs.forEach(function(i){edges.push({fl:prevL,fi:i,tl:prevL+1,ti:0});});
+    prevL++;prevIs=[0];
+    if(gt==='block'){levels.push([{type:'deny',tl:['Access Denied'],items:['Access blocked']}]);
+    }else if(gt==='session'){levels.push([{type:'session',tl:['Session Applied'],items:['Controls active']}]);
+    }else{levels.push([{type:'ok',tl:['Access Granted'],items:['Controls satisfied']},
+                       {type:'deny',tl:['Access Denied'],items:['Controls not met']}]);
+        edges.push({fl:prevL,fi:0,tl:prevL+1,ti:1});}
+    edges.push({fl:prevL,fi:0,tl:prevL+1,ti:0});
+    var lvlH=levels.map(function(l){return Math.max.apply(null,l.map(function(n){return nodeH(n.tl,n.items);}));});
+    var lvlW=levels.map(function(l){return l.length*NW+Math.max(0,l.length-1)*GAP_X;});
+    var W=Math.max.apply(null,lvlW)+2*SIDE;
+    var lvlY=[],cy=SIDE;
+    for(var i=0;i<levels.length;i++){lvlY.push(cy);cy+=lvlH[i]+GAP_Y;}
+    var H=cy-GAP_Y+SIDE;
+    var nx=levels.map(function(l,li){var sw=(W-lvlW[li])/2;return l.map(function(_,ni){return sw+ni*(NW+GAP_X);});});
+    var ncx=function(li,ni){return nx[li][ni]+NW/2;};
+    var nby=function(li){return lvlY[li]+lvlH[li];};
+    var nty=function(li){return lvlY[li];};
+    var svg=['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" style="display:block">'];
+    svg.push('<defs><marker id="cfxA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,1.5 L8.5,5 L0,8.5 Z" fill="'+CC+'"/></marker></defs>');
+    var eG={};
+    edges.forEach(function(e){var k=e.fl+','+e.tl;(eG[k]=eG[k]||[]).push(e);});
+    Object.keys(eG).forEach(function(k){
+        var grp=eG[k],FL=grp[0].fl,TL=grp[0].tl;
+        var fis=grp.map(function(e){return e.fi;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+        var tis=grp.map(function(e){return e.ti;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+        var midY=nby(FL)+GAP_Y/2;
+        if(fis.length===1&&tis.length===1){
+            var fx=ncx(FL,fis[0]),tx=ncx(TL,tis[0]);
+            if(Math.abs(fx-tx)<1){svg.push('<line x1="'+fx+'" y1="'+nby(FL)+'" x2="'+tx+'" y2="'+nty(TL)+'" stroke="'+CC+'" stroke-width="1.5" marker-end="url(#cfxA)"/>');
+            }else{svg.push('<path d="M'+fx+','+nby(FL)+' V'+midY+' H'+tx+' V'+nty(TL)+'" fill="none" stroke="'+CC+'" stroke-width="1.5" marker-end="url(#cfxA)"/>');}}
+        else if(fis.length===1){
+            var fx=ncx(FL,fis[0]),xs=tis.map(function(i){return ncx(TL,i);});
+            svg.push('<line x1="'+fx+'" y1="'+nby(FL)+'" x2="'+fx+'" y2="'+midY+'" stroke="'+CC+'" stroke-width="1.5"/>');
+            svg.push('<line x1="'+Math.min.apply(null,xs)+'" y1="'+midY+'" x2="'+Math.max.apply(null,xs)+'" y2="'+midY+'" stroke="'+CC+'" stroke-width="1.5"/>');
+            xs.forEach(function(tx){svg.push('<line x1="'+tx+'" y1="'+midY+'" x2="'+tx+'" y2="'+nty(TL)+'" stroke="'+CC+'" stroke-width="1.5" marker-end="url(#cfxA)"/>');});
+        }else{
+            var fxs=fis.map(function(i){return ncx(FL,i);}),tx=ncx(TL,tis[0]);
+            var mx=fxs.reduce(function(s,x){return s+x;},0)/fxs.length;
+            fxs.forEach(function(fx){svg.push('<line x1="'+fx+'" y1="'+nby(FL)+'" x2="'+fx+'" y2="'+midY+'" stroke="'+CC+'" stroke-width="1.5"/>');});
+            svg.push('<line x1="'+Math.min.apply(null,fxs)+'" y1="'+midY+'" x2="'+Math.max.apply(null,fxs)+'" y2="'+midY+'" stroke="'+CC+'" stroke-width="1.5"/>');
+            svg.push('<path d="M'+mx+','+midY+' H'+tx+' V'+nty(TL)+'" fill="none" stroke="'+CC+'" stroke-width="1.5" marker-end="url(#cfxA)"/>');
+        }});
+    levels.forEach(function(lvl,li){lvl.forEach(function(node,ni){
+        var x=nx[li][ni],y=lvlY[li],h=lvlH[li];
+        var col=C[node.type]||C.policy,bg=col[0],border=col[1],lblCol=col[2];
+        var lbl=LBL[node.type]||node.type.toUpperCase();
+        svg.push('<rect x="'+x+'" y="'+y+'" width="'+NW+'" height="'+h+'" rx="10" fill="'+bg+'" stroke="'+border+'" stroke-width="1.5"/>');
+        svg.push('<text x="'+(x+NW/2)+'" y="'+(y+PAD+13)+'" text-anchor="middle" fill="'+lblCol+'" font-size="8.5" font-weight="800" letter-spacing="1.3" font-family="'+FONT+'">'+escXml(lbl)+'</text>');
+        svg.push('<line x1="'+(x+10)+'" y1="'+(y+PAD+LBL_H)+'" x2="'+(x+NW-10)+'" y2="'+(y+PAD+LBL_H)+'" stroke="'+border+'" stroke-width="0.75" opacity="0.4"/>');
+        var ty=y+PAD+LBL_H+DIV_H;
+        node.tl.forEach(function(line){ty+=TTL_H;svg.push('<text x="'+(x+NW/2)+'" y="'+ty+'" text-anchor="middle" fill="#e5e7eb" font-size="12" font-weight="600" font-family="'+FONT+'">'+escXml(line)+'</text>');});
+        if(node.items.length>0){ty+=10;node.items.forEach(function(item){ty+=ITEM_H;
+            var s=item.length>30?item.slice(0,29)+'\u2026':item;
+            svg.push('<text x="'+(x+NW/2)+'" y="'+ty+'" text-anchor="middle" fill="#9ca3af" font-size="10" font-family="'+FONT+'">'+escXml(s)+'</text>');});}
+    });});
+    svg.push('</svg>');
+    return svg.join('');
+}
 function filterViz() {
     var text  = document.getElementById('vizFilter').value.toLowerCase();
     var state = document.getElementById('vizStateFilter').value;
@@ -1394,9 +1395,18 @@ function openFlowModal(btn) {
     var title = card.querySelector('.viz-name').textContent;
     var data  = card.querySelector('.viz-flow-data');
     document.getElementById('flowModalTitle').textContent = title;
-    document.getElementById('flowModalBody').innerHTML = data
-        ? data.innerHTML
-        : '<p style="color:var(--text-muted);padding:20px">No flow data available.</p>';
+    var body = document.getElementById('flowModalBody');
+    if (data && data.dataset.type === 'json') {
+        try {
+            body.innerHTML = '<div class="flow-svg-wrap">' + renderFlowSvg(JSON.parse(data.textContent)) + '</div>';
+        } catch(e) {
+            body.innerHTML = '<p style="color:var(--text-muted);padding:20px">Error rendering flow diagram.</p>';
+        }
+    } else {
+        body.innerHTML = data
+            ? data.innerHTML
+            : '<p style="color:var(--text-muted);padding:20px">No flow data available.</p>';
+    }
     document.getElementById('flowModal').classList.add('open');
     document.body.style.overflow = 'hidden';
 }
