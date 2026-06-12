@@ -34,6 +34,7 @@ function Export-CABaselineReport {
     $devices        = $AuditData.DeviceInfo
     $tenantCtx      = $AuditData.TenantContext
     $postureChecks  = $AuditData.PostureChecks
+    $msTemplates    = @($AuditData.MicrosoftTemplates)
     $summary        = $comparison.Summary
     $tenantName     = $tenantCtx.TenantName ?? 'Unknown Tenant'
     $reportDate     = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
@@ -146,6 +147,16 @@ tbody tr:hover { background: rgba(59,130,246,0.05); }
 .posture-pass { color: var(--accent-green); }
 .posture-warning { color: var(--accent-yellow); }
 .posture-fail { color: var(--accent-red); }
+.posture-detail-wrap { background: var(--bg-secondary); border-top: 2px solid var(--accent-yellow); }
+.posture-detail-wrap .diff-inner-table { margin: 0; }
+.stat-strip { display: flex; flex-wrap: wrap; gap: 22px; padding: 14px 16px; }
+.stat-strip .stat-val { font-size: 1.35rem; font-weight: 700; font-family: var(--font-display); line-height: 1.1; }
+.stat-strip .stat-lbl { font-size: 0.64rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.section-note { color: var(--text-secondary); font-size: 0.78rem; margin: -8px 0 16px; max-width: 80ch; }
+.method-chip { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 0.74rem; margin: 3px 6px 3px 0; border: 1px solid var(--border); }
+.method-on { color: var(--accent-green); border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.08); }
+.method-off { color: var(--text-muted); }
+.method-pr { box-shadow: 0 0 0 1px rgba(6,182,212,0.4) inset; }
 .diff-list { margin: 4px 0; padding-left: 16px; font-size: 0.75rem; color: var(--text-secondary); }
 .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
 .compare-btn { background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; margin-left: 6px; transition: all 0.15s; white-space: nowrap; }
@@ -715,6 +726,114 @@ $platformRows
 "@
 
     # ── Section 6: Security Posture ──
+
+    # ── Helper: small stat strip (label/value pairs) for posture drill-downs ──
+    function Format-StatStrip {
+        param([object[]]$Stats)   # array of @(label, value, [colourVar])
+        $enc   = [System.Web.HttpUtility]
+        $items = foreach ($s in $Stats) {
+            $colour = if ($s.Count -ge 3 -and $s[2]) { $s[2] } else { 'var(--text-primary)' }
+            "<div><div class='stat-val' style='color:$colour'>$($enc::HtmlEncode([string]$s[1]))</div><div class='stat-lbl'>$($enc::HtmlEncode([string]$s[0]))</div></div>"
+        }
+        "<div class='stat-strip'>$($items -join '')</div>"
+    }
+
+    # ── Helper: render the expandable detail panel for a posture check ──
+    function Format-PostureDetail {
+        param([string]$Key, [object]$Check)
+        $enc  = [System.Web.HttpUtility]
+        $body = ''
+
+        switch ($Key) {
+            'BreakGlass' {
+                $accts = @($Check.BreakGlass)
+                if ($accts.Count -eq 0) { return '' }
+                $rows = ($accts | ForEach-Object {
+                    "<tr><td><strong>$($enc::HtmlEncode([string]$_.DisplayName))</strong></td><td>$($enc::HtmlEncode([string]$_.UserPrincipalName))</td><td>Excluded from $($_.ExcludedFrom) / $($_.TotalPolicies) enabled policies</td></tr>"
+                }) -join ''
+                $body = "<table class='diff-inner-table'><thead><tr><th>Account</th><th>UPN</th><th>Exclusion coverage</th></tr></thead><tbody>$rows</tbody></table>"
+            }
+            'AdminCoverage' {
+                $body = Format-StatStrip @(
+                    @('Admin-targeted policies', $Check.AdminPolicyCount, 'var(--accent-blue)'),
+                    @('Unique admins', $Check.UniqueAdminCount, 'var(--accent-purple)'),
+                    @('Admin MFA policies', $Check.AdminMfaPolicies, $(if ($Check.AdminMfaPolicies -gt 0) { 'var(--accent-green)' } else { 'var(--accent-red)' })),
+                    @('Admin device policies', $Check.AdminDevicePolicies, $(if ($Check.AdminDevicePolicies -gt 0) { 'var(--accent-green)' } else { 'var(--accent-yellow)' }))
+                )
+            }
+            'GuestPolicies' {
+                $body = Format-StatStrip @(
+                    @('Guest users', $Check.GuestCount, 'var(--accent-blue)'),
+                    @('Guest-targeted policies', $Check.GuestPolicyCount, $(if ($Check.GuestPolicyCount -gt 0) { 'var(--accent-green)' } else { 'var(--accent-red)' })),
+                    @('Guest MFA policies', $Check.GuestMfaPolicies, $(if ($Check.GuestMfaPolicies -gt 0) { 'var(--accent-green)' } else { 'var(--accent-yellow)' }))
+                )
+            }
+            'NamedLocations' {
+                if (($Check.TotalLocations ?? 0) -eq 0) { return '' }
+                $body = Format-StatStrip @(
+                    @('Total locations', $Check.TotalLocations, 'var(--accent-blue)'),
+                    @('Trusted', $Check.TrustedCount, $(if ($Check.TrustedCount -gt 0) { 'var(--accent-green)' } else { 'var(--accent-yellow)' })),
+                    @('IP-based', $Check.IpLocations, 'var(--accent-cyan)'),
+                    @('Country-based', $Check.CountryLocations, 'var(--accent-cyan)')
+                )
+            }
+            'AuthMethodReadiness' {
+                $methods = @($Check.AllMethods)
+                if ($methods.Count -eq 0) { return '' }
+                $pr = @($Check.PhishingResistant)
+                $chips = ($methods | ForEach-Object {
+                    $cls = if ($_.Enabled) { 'method-chip method-on' } else { 'method-chip method-off' }
+                    if ($_.Enabled -and ($pr -contains $_.Method)) { $cls += ' method-pr' }
+                    $mark = if ($_.Enabled) { '&#x2713; ' } else { '&#x2717; ' }
+                    "<span class='$cls'>$mark$($enc::HtmlEncode([string]$_.Method))</span>"
+                }) -join ''
+                $note = if ($pr.Count -gt 0) { "Phishing-resistant (highlighted): $($enc::HtmlEncode($pr -join ', '))" } else { 'No phishing-resistant methods enabled.' }
+                $body = "<div style='padding:14px 16px'><div style='margin-bottom:8px'>$chips</div><div style='font-size:0.74rem;color:var(--text-secondary)'>$note</div></div>"
+            }
+            'PolicyExclusions' {
+                $over = @($Check.OverExcluded)
+                if ($over.Count -eq 0 -and ($Check.EmptyTargets ?? 0) -eq 0) { return '' }
+                $parts = ''
+                if ($over.Count -gt 0) {
+                    $rows = ($over | ForEach-Object {
+                        "<tr><td><strong>$($enc::HtmlEncode([string]$_.PolicyName))</strong></td><td>$($_.ExcludedUsers)</td><td>$($_.ExcludedGroups)</td><td>$($_.ExcludedRoles)</td><td><span class='diff-mismatch'>$($_.Total)</span></td></tr>"
+                    }) -join ''
+                    $parts += "<table class='diff-inner-table'><thead><tr><th>Policy</th><th>Users</th><th>Groups</th><th>Roles</th><th>Total excl.</th></tr></thead><tbody>$rows</tbody></table>"
+                }
+                if (($Check.EmptyTargets ?? 0) -gt 0) {
+                    $parts += "<div style='padding:10px 16px;font-size:0.76rem;color:var(--accent-yellow)'>&#x26A0;&#xFE0F; $($Check.EmptyTargets) enabled policy(ies) have no user/group/role targeting and may not apply to anyone.</div>"
+                }
+                $body = $parts
+            }
+            'ReportOnlyAge' {
+                $stale = @($Check.StalePolicies)
+                if ($stale.Count -eq 0) { return '' }
+                $rows = ($stale | ForEach-Object {
+                    $age  = if ($_.AgeInDays -lt 0) { 'Unknown' } else { "$($_.AgeInDays) days" }
+                    $last = if ($_.LastModified) { ([datetime]$_.LastModified).ToString('yyyy-MM-dd') } else { '—' }
+                    "<tr><td><strong>$($enc::HtmlEncode([string]$_.PolicyName))</strong></td><td>$($enc::HtmlEncode($age))</td><td>$last</td></tr>"
+                }) -join ''
+                $body = "<table class='diff-inner-table'><thead><tr><th>Report-only policy</th><th>Age</th><th>Last modified</th></tr></thead><tbody>$rows</tbody></table>"
+            }
+            'PolicyConflicts' {
+                $conflicts = @($Check.Conflicts)
+                if ($conflicts.Count -eq 0) { return '' }
+                $rows = ($conflicts | ForEach-Object {
+                    $involved = if ($_.Type -eq 'Block+Grant Overlap') {
+                        "$($enc::HtmlEncode([string]$_.BlockPolicy)) &harr; $($enc::HtmlEncode([string]$_.GrantPolicy))"
+                    } else {
+                        $enc::HtmlEncode([string]$_.Policies)
+                    }
+                    "<tr><td><span class='badge badge-yellow'>$($enc::HtmlEncode([string]$_.Type))</span></td><td>$involved</td><td style='color:var(--text-secondary)'>$($enc::HtmlEncode([string]$_.Description))</td></tr>"
+                }) -join ''
+                $body = "<table class='diff-inner-table'><thead><tr><th>Type</th><th>Policies involved</th><th>Detail</th></tr></thead><tbody>$rows</tbody></table>"
+            }
+        }
+
+        if (-not $body) { return '' }
+        "<div class='posture-detail-wrap'>$body</div>"
+    }
+
     $postureRows = [System.Text.StringBuilder]::new()
     $checkOrder = @('SecurityDefaults', 'BreakGlass', 'AdminCoverage', 'GuestPolicies', 'NamedLocations', 'AuthMethodReadiness', 'PolicyExclusions', 'ReportOnlyAge', 'PolicyConflicts')
     $checkLabels = @{
@@ -744,7 +863,16 @@ $platformRows
             'Low'      { '<span class="badge badge-blue">Low</span>' }
             'Info'     { '<span class="badge badge-gray">Info</span>' }
         }
-        [void]$postureRows.Append("<tr><td>$statusIcon</td><td><strong>$($checkLabels[$key])</strong></td><td>$sevBadge</td><td>$([System.Web.HttpUtility]::HtmlEncode($check.Finding))</td></tr>")
+
+        $detailHtml  = Format-PostureDetail -Key $key -Check $check
+        $detailToggle = ''
+        if ($detailHtml) {
+            $detailToggle = " <button class='compare-btn' onclick='togglePosture(`"$key`")'>&#x1F50D; Details</button>"
+        }
+        [void]$postureRows.Append("<tr><td>$statusIcon</td><td><strong>$($checkLabels[$key])</strong></td><td>$sevBadge</td><td>$([System.Web.HttpUtility]::HtmlEncode($check.Finding))$detailToggle</td></tr>")
+        if ($detailHtml) {
+            [void]$postureRows.Append("<tr class='posture-detail-row' id='posture-row-$key' style='display:none'><td colspan='4' style='padding:0'>$detailHtml</td></tr>")
+        }
     }
 
     $sec6 = @"
@@ -792,6 +920,116 @@ $(if ($recommendations.TotalCount -eq 0) { '<p style="color:var(--accent-green);
   else { "<div style='overflow-x:auto'><table id='recTable'>$recTableHeader<tbody>$($recRows.ToString())</tbody></table></div>" })
 </section>
 "@
+
+    # ── Section 7b: Microsoft Recommended Templates ──
+
+    # ── Helper: heuristically match a Microsoft template to a deployed policy ──
+    function Get-TemplateCoverage {
+        param([object]$Template, [object[]]$Policies)
+
+        $d = $Template.Details
+        if (-not $d) { return [PSCustomObject]@{ Covered = $false; MatchedPolicy = $null } }
+
+        $tGrant   = @($d.grantControls.builtInControls ?? @())
+        $tApps    = @($d.conditions.applications.includeApplications ?? @())
+        $tUsers   = @($d.conditions.users.includeUsers ?? @())
+        $tRoles   = @($d.conditions.users.includeRoles ?? @())
+        $tIsBlock = $tGrant -contains 'block'
+        $tGrantNonBlock = @($tGrant | Where-Object { $_ -ne 'block' })
+
+        foreach ($p in $Policies) {
+            if ($p.state -eq 'disabled') { continue }
+            $pGrant   = @($p.grantControls.builtInControls ?? @())
+            $pApps    = @($p.conditions.applications.includeApplications ?? @())
+            $pUsers   = @($p.conditions.users.includeUsers ?? @())
+            $pRoles   = @($p.conditions.users.includeRoles ?? @())
+            $pIsBlock = $pGrant -contains 'block'
+
+            # Grant intent: both block, OR share a non-block control, OR template defines no grant (session-only)
+            $grantMatch = if ($tIsBlock) { $pIsBlock }
+                          elseif ($tGrantNonBlock.Count -eq 0) { $true }
+                          else { @($tGrantNonBlock | Where-Object { $pGrant -contains $_ }).Count -gt 0 }
+            if (-not $grantMatch) { continue }
+
+            # App scope overlap (or template app-agnostic)
+            $appMatch = ($tApps.Count -eq 0) -or
+                        ($tApps -contains 'All' -and $pApps -contains 'All') -or
+                        (@($tApps | Where-Object { $pApps -contains $_ }).Count -gt 0)
+            if (-not $appMatch) { continue }
+
+            # User/role scope overlap
+            $userMatch = ($tUsers -contains 'All' -and $pUsers -contains 'All') -or
+                         (@($tUsers | Where-Object { $pUsers -contains $_ }).Count -gt 0) -or
+                         ($tRoles.Count -gt 0 -and $pRoles.Count -gt 0)
+            if (-not $userMatch) { continue }
+
+            return [PSCustomObject]@{ Covered = $true; MatchedPolicy = $p.displayName }
+        }
+        return [PSCustomObject]@{ Covered = $false; MatchedPolicy = $null }
+    }
+
+    $secMsTemplates = ''
+    $msTemplatesNav = ''
+    if ($msTemplates.Count -gt 0) {
+        $enc           = [System.Web.HttpUtility]
+        $tplRows       = [System.Text.StringBuilder]::new()
+        $coveredCount  = 0
+        $scenarioSet   = [System.Collections.Generic.HashSet[string]]::new()
+
+        $sortedTpl = $msTemplates | Sort-Object { $_.Name }
+        foreach ($t in $sortedTpl) {
+            $cov = Get-TemplateCoverage -Template $t -Policies $policies
+            if ($cov.Covered) { $coveredCount++ }
+
+            # Scenarios may be a comma-string or an array
+            $scenarios = if ($t.Scenarios -is [array]) { @($t.Scenarios) }
+                         elseif ($t.Scenarios) { @($t.Scenarios -split '\s*,\s*') }
+                         else { @() }
+            $scenarioBadges = ($scenarios | ForEach-Object {
+                [void]$scenarioSet.Add($_)
+                "<span class='badge badge-blue' style='margin:1px'>$($enc::HtmlEncode($_))</span>"
+            }) -join ' '
+
+            $covBadge = if ($cov.Covered) {
+                '<span class="badge badge-green">&#x2705; Covered</span>'
+            } else {
+                '<span class="badge badge-yellow">&#x26A0;&#xFE0F; Gap</span>'
+            }
+            $matchedCell = if ($cov.MatchedPolicy) { $enc::HtmlEncode($cov.MatchedPolicy) } else { '<span style="color:var(--text-muted)">— none found —</span>' }
+            $descAttr    = $enc::HtmlEncode([string]$t.Description)
+            $covData     = if ($cov.Covered) { 'Covered' } else { 'Gap' }
+            $scenAttr    = $enc::HtmlEncode(($scenarios -join ' '))
+
+            [void]$tplRows.Append("<tr data-coverage='$covData' data-scenarios='$scenAttr'><td><strong title='$descAttr'>$($enc::HtmlEncode([string]$t.Name))</strong></td><td>$scenarioBadges</td><td>$covBadge</td><td>$matchedCell</td></tr>")
+        }
+
+        $gapCount      = $msTemplates.Count - $coveredCount
+        $scenarioOpts  = '<option value="">All Scenarios</option>'
+        foreach ($s in ($scenarioSet | Sort-Object)) {
+            $scenarioOpts += "<option value='$($enc::HtmlEncode($s))'>$($enc::HtmlEncode($s))</option>"
+        }
+
+        $secMsTemplates = @"
+<section id="ms-templates">
+<h2>Microsoft Recommended Templates ($($msTemplates.Count))</h2>
+<p class="section-note">Microsoft's built-in Conditional Access templates and whether a comparable enabled/report-only policy exists in your tenant. Coverage is matched heuristically on grant intent plus app and user scope — treat it as a starting point and verify before acting.</p>
+<div class="card-grid">
+    <div class="card"><div class="value" style="color:var(--accent-blue)">$($msTemplates.Count)</div><div class="label">Templates</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-green)">$coveredCount</div><div class="label">Likely Covered</div></div>
+    <div class="card"><div class="value" style="color:var(--accent-yellow)">$gapCount</div><div class="label">Potential Gaps</div></div>
+</div>
+<div class="filter-bar">
+<input type="text" id="tplFilter" placeholder="Search templates..." onkeyup="filterTable('msTemplateTable','tplFilter')">
+<select onchange="filterTableByData('msTemplateTable','coverage',this.value)"><option value="">All Coverage</option><option value="Covered">Covered</option><option value="Gap">Gap</option></select>
+<select onchange="filterTplScenario(this.value)">$scenarioOpts</select>
+</div>
+<div style="overflow-x:auto"><table id="msTemplateTable"><thead><tr><th onclick="sortTable('msTemplateTable',0)">Template</th><th>Scenarios</th><th onclick="sortTable('msTemplateTable',2)">Coverage</th><th onclick="sortTable('msTemplateTable',3)">Matched Policy</th></tr></thead><tbody>
+$($tplRows.ToString())
+</tbody></table></div>
+</section>
+"@
+        $msTemplatesNav = '<a href="#ms-templates">MS Templates</a>'
+    }
 
     # ── Section 8: Policy Flow Visualizer ──
     function Format-PolicyVizCard {
@@ -1192,8 +1430,27 @@ function filterGapTable(attr, value) {
         r.style.display = r.dataset[attr] === value ? '' : 'none';
     });
 }
+function filterTableByData(tableId, attr, value) {
+    var rows = document.getElementById(tableId).querySelectorAll('tbody tr');
+    rows.forEach(function(r) {
+        r.style.display = (!value || r.dataset[attr] === value) ? '' : 'none';
+    });
+}
+function filterTplScenario(value) {
+    var rows = document.getElementById('msTemplateTable').querySelectorAll('tbody tr');
+    rows.forEach(function(r) {
+        if (!value) { r.style.display = ''; return; }
+        var scen = (r.dataset.scenarios || '').split(' ');
+        r.style.display = scen.indexOf(value) !== -1 ? '' : 'none';
+    });
+}
 function toggleDiff(baselineId) {
     var panelRow = document.getElementById('diff-row-' + baselineId);
+    if (!panelRow) return;
+    panelRow.style.display = panelRow.style.display === 'none' ? '' : 'none';
+}
+function togglePosture(key) {
+    var panelRow = document.getElementById('posture-row-' + key);
     if (!panelRow) return;
     panelRow.style.display = panelRow.style.display === 'none' ? '' : 'none';
 }
@@ -1444,6 +1701,7 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
     <a href="#inventory">Policy Inventory</a>
     <a href="#gap-analysis">Gap Analysis</a>
     <a href="#recommendations">Recommendations</a>
+    $msTemplatesNav
     <a href="#visualizer">Visualizer</a>
 </nav>
 <div class="container">
@@ -1453,6 +1711,7 @@ $sec2
 $sec3
 $sec4
 $sec7
+$secMsTemplates
 $secViz
 </div>
 <div class="footer">
