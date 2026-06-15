@@ -748,10 +748,20 @@ $platformRows
             'BreakGlass' {
                 $accts = @($Check.BreakGlass)
                 if ($accts.Count -eq 0) { return '' }
+                $mark = {
+                    param([bool]$On)
+                    if ($On) { "<span style='color:var(--accent-green)'>&#10003;</span>" }
+                    else { "<span style='color:var(--accent-red)'>&#10007;</span>" }
+                }
                 $rows = ($accts | ForEach-Object {
-                    "<tr><td><strong>$($enc::HtmlEncode([string]$_.DisplayName))</strong></td><td>$($enc::HtmlEncode([string]$_.UserPrincipalName))</td><td>Excluded from $($_.ExcludedFrom) / $($_.TotalPolicies) enabled policies</td></tr>"
+                    $sig = "GA $(& $mark ([bool]$_.PermanentGlobalAdmin)) &middot; " +
+                           "Initial-domain $(& $mark ([bool]$_.InitialDomainUpn)) &middot; " +
+                           "Cloud-only $(& $mark ([bool]$_.CloudOnly)) &middot; " +
+                           "No-pwd-expiry $(& $mark ([bool]$_.PasswordNeverExpires)) &middot; " +
+                           "Strong-auth $(& $mark ([bool]$_.StrongAuthRegistered))"
+                    "<tr><td><strong>$($enc::HtmlEncode([string]$_.DisplayName))</strong></td><td>$($enc::HtmlEncode([string]$_.UserPrincipalName))</td><td>$($enc::HtmlEncode([string]$_.Confidence)) ($($_.ConfidenceScore))</td><td>$($_.ExcludedFrom) / $($_.TotalPolicies)</td><td style='font-size:0.85em'>$sig</td></tr>"
                 }) -join ''
-                $body = "<table class='diff-inner-table'><thead><tr><th>Account</th><th>UPN</th><th>Exclusion coverage</th></tr></thead><tbody>$rows</tbody></table>"
+                $body = "<table class='diff-inner-table'><thead><tr><th>Account</th><th>UPN</th><th>Confidence</th><th>Exclusion</th><th>Signals</th></tr></thead><tbody>$rows</tbody></table>"
             }
             'AdminCoverage' {
                 $body = Format-StatStrip @(

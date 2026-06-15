@@ -442,6 +442,72 @@ Describe 'Get-PolicyMatchScore' {
     }
 }
 
+Describe 'Test-CABreakGlassAccounts' {
+    BeforeAll {
+        . "$ModuleRoot\Private\Test-CABreakGlassAccounts.ps1"
+    }
+
+    It 'Warns when there are no enabled policies' {
+        $policies = @([PSCustomObject]@{ state = 'disabled'; conditions = @{ users = @{ excludeUsers = @() } } })
+        $ctx = [PSCustomObject]@{ InitialDomain = 'contoso.onmicrosoft.com'; PermanentGlobalAdmins = @(); AdminRoleMembers = @() }
+        $r = Test-CABreakGlassAccounts -CurrentPolicies $policies -TenantContext $ctx
+        $r.Status | Should -Be 'Warning'
+        $r.BreakGlass.Count | Should -Be 0
+    }
+
+    It 'Fails when no accounts are excluded' {
+        $policies = 1..3 | ForEach-Object {
+            [PSCustomObject]@{ state = 'enabled'; conditions = @{ users = @{ excludeUsers = @(); excludeGroups = @(); excludeRoles = @() } } }
+        }
+        $ctx = [PSCustomObject]@{ InitialDomain = 'contoso.onmicrosoft.com'; PermanentGlobalAdmins = @(); AdminRoleMembers = @() }
+        $r = Test-CABreakGlassAccounts -CurrentPolicies $policies -TenantContext $ctx
+        $r.Status | Should -Be 'Fail'
+        $r.BreakGlass.Count | Should -Be 0
+    }
+
+    It 'Detects an account excluded via an excluded group and scores it Confirmed' {
+        Mock Invoke-MgGraphRequest { [PSCustomObject]@{ value = @([PSCustomObject]@{ id = 'bg1' }) } } `
+            -ParameterFilter { $Uri -like '*groups/*/members*' }
+        Mock Invoke-MgGraphRequest {
+            [PSCustomObject]@{ id = 'bg1'; displayName = 'Break Glass'; userPrincipalName = 'bg1@contoso.onmicrosoft.com'; onPremisesSyncEnabled = $null; passwordPolicies = 'DisablePasswordExpiration' }
+        } -ParameterFilter { $Uri -like '*users/bg1?*' }
+        Mock Invoke-MgGraphRequest {
+            [PSCustomObject]@{ value = @([PSCustomObject]@{ '@odata.type' = '#microsoft.graph.fido2AuthenticationMethod' }) }
+        } -ParameterFilter { $Uri -like '*users/bg1/authentication/methods*' }
+
+        $policies = 1..5 | ForEach-Object {
+            [PSCustomObject]@{ state = 'enabled'; conditions = @{ users = @{ excludeUsers = @(); excludeGroups = @('grp1'); excludeRoles = @() } } }
+        }
+        $ctx = [PSCustomObject]@{ InitialDomain = 'contoso.onmicrosoft.com'; PermanentGlobalAdmins = @('bg1'); AdminRoleMembers = @() }
+
+        $r = Test-CABreakGlassAccounts -CurrentPolicies $policies -TenantContext $ctx
+        $r.BreakGlass.UserId | Should -Contain 'bg1'
+        $acct = $r.BreakGlass | Where-Object { $_.UserId -eq 'bg1' }
+        $acct.Confidence | Should -Be 'Confirmed'
+        $acct.ConfidenceScore | Should -Be 100
+        $acct.CloudOnly | Should -BeTrue
+        $acct.StrongAuthRegistered | Should -BeTrue
+    }
+
+    It 'Scores a direct exclusion with no best-practice signals as Possible' {
+        Mock Invoke-MgGraphRequest {
+            [PSCustomObject]@{ id = 'u1'; displayName = 'Regular Admin'; userPrincipalName = 'admin@contoso.com'; onPremisesSyncEnabled = $true; passwordPolicies = $null }
+        } -ParameterFilter { $Uri -like '*users/u1?*' }
+        Mock Invoke-MgGraphRequest { [PSCustomObject]@{ value = @() } } `
+            -ParameterFilter { $Uri -like '*authentication/methods*' }
+
+        $policies = 1..4 | ForEach-Object {
+            [PSCustomObject]@{ state = 'enabled'; conditions = @{ users = @{ excludeUsers = @('u1'); excludeGroups = @(); excludeRoles = @() } } }
+        }
+        $ctx = [PSCustomObject]@{ InitialDomain = 'contoso.onmicrosoft.com'; PermanentGlobalAdmins = @(); AdminRoleMembers = @() }
+
+        $r = Test-CABreakGlassAccounts -CurrentPolicies $policies -TenantContext $ctx
+        $acct = $r.BreakGlass | Where-Object { $_.UserId -eq 'u1' }
+        $acct.Confidence | Should -Be 'Possible'
+        $acct.ConfidenceScore | Should -Be 25
+    }
+}
+
 Describe 'Test-BaselineLicenseApplicability' {
     BeforeAll {
         . "$ModuleRoot\Private\Test-BaselineLicenseApplicability.ps1"

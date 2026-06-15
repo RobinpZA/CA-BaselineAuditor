@@ -44,6 +44,8 @@ function Connect-CABaselineAuditor {
         'Device.Read.All'
         'DeviceManagementManagedDevices.Read.All'
         'Organization.Read.All'
+        'RoleManagement.Read.Directory'
+        'UserAuthenticationMethod.Read.All'
     )
 
     $connectParams = @{ NoWelcome = $true }

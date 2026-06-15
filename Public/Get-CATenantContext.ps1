@@ -85,27 +85,54 @@ function Get-CATenantContext {
         }
     }
 
-    # ── Tenant info (org name) ──
+    # ── Tenant info (org name + domains) ──
     $tenantName = 'Unknown Tenant'
     $tenantDomain = ''
+    $initialDomain = ''
     try {
         $org = (Invoke-MgGraphRequest -Method GET -Uri 'https://graph.microsoft.com/v1.0/organization?$select=displayName,verifiedDomains').value[0]
         $tenantName = $org.displayName
         $primary = $org.verifiedDomains | Where-Object { $_.isDefault -eq $true } | Select-Object -First 1
         if ($primary) { $tenantDomain = $primary.name }
+        # The initial *.onmicrosoft.com domain — break-glass accounts typically live here.
+        $initial = $org.verifiedDomains | Where-Object { $_.isInitial -eq $true } | Select-Object -First 1
+        if ($initial) { $initialDomain = $initial.name }
     } catch {
         Write-Warning "[CA-BaselineAuditor] Could not retrieve org info: $($_.Exception.Message)"
     }
 
+    # ── Permanent (standing) Global Administrators ──
+    # Break-glass accounts hold a permanent Global Admin assignment, not a PIM-eligible one.
+    $permanentGlobalAdmins = [System.Collections.Generic.List[string]]::new()
+    $gaRoleTemplateId = '62e90394-69f5-4237-9190-012177145e10'
+    try {
+        $uri = "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignmentScheduleInstances?`$filter=roleDefinitionId eq '$gaRoleTemplateId'"
+        $resp = Invoke-MgGraphRequest -Method GET -Uri $uri -ErrorAction Stop
+        foreach ($a in $resp.value) {
+            # assignmentType 'Assigned' (not 'Activated') with no end date == standing assignment.
+            if ($a.assignmentType -eq 'Assigned' -and -not $a.endDateTime -and $a.principalId) {
+                $permanentGlobalAdmins.Add([string]$a.principalId)
+            }
+        }
+    } catch {
+        Write-Warning "[CA-BaselineAuditor] Could not retrieve permanent role assignments (RoleManagement.Read.Directory): $($_.Exception.Message)"
+        # Fallback: treat current Global Administrator role members as permanent.
+        foreach ($m in ($adminRoleMembers | Where-Object { $_.RoleName -eq 'Global Administrator' })) {
+            if ($m.UserId) { $permanentGlobalAdmins.Add([string]$m.UserId) }
+        }
+    }
+
     $result = [PSCustomObject]@{
-        TenantName        = $tenantName
-        TenantDomain      = $tenantDomain
-        NamedLocations    = $namedLocations
-        AdminRoleMembers  = $adminRoleMembers
-        UniqueAdminCount  = @($adminRoleMembers | Select-Object -Property UserId -Unique).Count
-        AuthMethodsPolicy = $authMethodsPolicy
-        SecurityDefaults  = $securityDefaults
-        GuestUserCount    = $guestCount
+        TenantName            = $tenantName
+        TenantDomain          = $tenantDomain
+        InitialDomain         = $initialDomain
+        NamedLocations        = $namedLocations
+        AdminRoleMembers      = $adminRoleMembers
+        UniqueAdminCount      = @($adminRoleMembers | Select-Object -Property UserId -Unique).Count
+        PermanentGlobalAdmins = @($permanentGlobalAdmins | Select-Object -Unique)
+        AuthMethodsPolicy     = $authMethodsPolicy
+        SecurityDefaults      = $securityDefaults
+        GuestUserCount        = $guestCount
     }
 
     Write-Host "[CA-BaselineAuditor] Tenant: $tenantName | Named locations: $($namedLocations.Count) | Admins: $($result.UniqueAdminCount) | Guests: $guestCount" -ForegroundColor Green
