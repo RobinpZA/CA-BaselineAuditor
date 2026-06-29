@@ -105,11 +105,23 @@ body { font-family: var(--font-body); background: var(--bg-primary); color: var(
 .header::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent 0%, rgba(59,130,246,0.7) 35%, rgba(6,182,212,0.5) 65%, transparent 100%); }
 .header h1 { font-family: var(--font-display); font-size: 1.7rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; position: relative; }
 .header .meta { color: var(--text-secondary); font-size: 0.78rem; margin-top: 8px; font-family: var(--font-mono); position: relative; letter-spacing: 0.015em; }
-nav { background: var(--bg-secondary); padding: 0 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; gap: 0; }
-nav a { color: var(--text-secondary); text-decoration: none; padding: 11px 16px; font-size: 0.79rem; font-weight: 500; white-space: nowrap; transition: color 0.2s, border-color 0.2s, background 0.2s; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-nav a:hover { color: var(--text-primary); background: rgba(255,255,255,0.03); }
-nav a.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); background: none; }
-section { margin-bottom: 32px; scroll-margin-top: 56px; }
+.sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 244px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; }
+.sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 22px 20px 18px; font-family: var(--font-display); font-weight: 700; font-size: 0.92rem; color: #fff; border-bottom: 1px solid var(--border); letter-spacing: -0.01em; line-height: 1.3; }
+.sidebar-brand .brand-icon { font-size: 1.25rem; flex-shrink: 0; }
+nav { display: flex; flex-direction: column; padding: 14px 12px 24px; gap: 2px; }
+nav a { color: var(--text-secondary); text-decoration: none; padding: 9px 14px; font-size: 0.82rem; font-weight: 500; border-radius: 8px; border-left: 2px solid transparent; transition: color 0.15s, background 0.15s, border-color 0.15s; }
+nav a:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+nav a.active { color: var(--accent-blue); background: rgba(59,130,246,0.1); border-left-color: var(--accent-blue); }
+.main { margin-left: 244px; }
+section { margin-bottom: 32px; scroll-margin-top: 16px; }
+@media (max-width: 860px) {
+    .sidebar { position: static; width: auto; flex-direction: column; border-right: none; border-bottom: 1px solid var(--border); }
+    .sidebar-brand { border-bottom: 1px solid var(--border); }
+    nav { flex-direction: row; flex-wrap: wrap; padding: 8px 12px; }
+    nav a { border-left: none; }
+    nav a.active { border-left: none; }
+    .main { margin-left: 0; }
+}
 h2 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; padding: 10px 0 10px 16px; border-left: 3px solid var(--accent-blue); letter-spacing: -0.01em; }
 h3 { font-size: 1rem; font-weight: 600; margin: 16px 0 10px; }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -185,7 +197,7 @@ tbody tr:hover { background: rgba(59,130,246,0.05); }
 .card-grid .card:nth-child(5) { animation-delay: 0.24s; }
 .card-grid .card:nth-child(6) { animation-delay: 0.29s; }
 .card-grid .card:nth-child(7) { animation-delay: 0.34s; }
-@media print { body { background: #fff; color: #000; } .card { border: 1px solid #ccc; animation: none; } nav { display: none; } thead th { background: #eee; } }
+@media print { body { background: #fff; color: #000; } .card { border: 1px solid #ccc; animation: none; } .sidebar { display: none; } .main { margin-left: 0; } thead th { background: #eee; } }
 @media (max-width: 768px) { .card-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
 /* ── Policy Flow Visualizer ── */
 .viz-grid { display: flex; flex-direction: column; gap: 12px; }
@@ -1535,17 +1547,27 @@ document.querySelectorAll('nav a').forEach(function(link) {
         this.classList.add('active');
     });
 });
-// Apply scroll offset from actual nav height
+// Scroll-spy: highlight the sidebar link for the section currently in view
 (function() {
-    var nav = document.querySelector('nav');
-    if (!nav) return;
-    function applyNavHeight() {
-        var h = Math.ceil(nav.getBoundingClientRect().height);
-        document.querySelectorAll('section').forEach(function(s) { s.style.scrollMarginTop = (h + 4) + 'px'; });
-        document.documentElement.style.scrollPaddingTop = (h + 4) + 'px';
+    var links = Array.from(document.querySelectorAll('nav a'));
+    var map = {};
+    links.forEach(function(l) {
+        var id = l.getAttribute('href').slice(1);
+        if (document.getElementById(id)) { map[id] = l; }
+    });
+    var sections = Object.keys(map).map(function(id) { return document.getElementById(id); });
+    if (!sections.length) { return; }
+    function setActive(id) {
+        links.forEach(function(a) { a.classList.remove('active'); });
+        if (map[id]) { map[id].classList.add('active'); }
     }
-    applyNavHeight();
-    window.addEventListener('resize', applyNavHeight);
+    var observer = new IntersectionObserver(function(entries) {
+        var visible = entries.filter(function(e) { return e.isIntersecting; });
+        if (!visible.length) { return; }
+        visible.sort(function(a, b) { return a.boundingClientRect.top - b.boundingClientRect.top; });
+        setActive(visible[0].target.id);
+    }, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
+    sections.forEach(function(s) { observer.observe(s); });
 })();
 function escXml(s) {
     return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1700,20 +1722,24 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 <style>$css</style>
 </head>
 <body>
+<aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-icon">&#x1F6E1;&#xFE0F;</span><span>CA Baseline Audit</span></div>
+    <nav>
+        <a href="#summary" class="active">Summary</a>
+        <a href="#posture">Security Posture</a>
+        <a href="#licensing">Licensing</a>
+        <a href="#inventory">Policy Inventory</a>
+        <a href="#gap-analysis">Gap Analysis</a>
+        <a href="#recommendations">Recommendations</a>
+        $msTemplatesNav
+        <a href="#visualizer">Visualizer</a>
+    </nav>
+</aside>
+<div class="main">
 <div class="header">
     <h1>&#x1F6E1;&#xFE0F; Conditional Access Baseline Audit</h1>
     <div class="meta">$([System.Web.HttpUtility]::HtmlEncode($tenantName)) ($($tenantCtx.TenantDomain)) &mdash; Generated $reportDate &mdash; Baseline: <strong>$([System.Web.HttpUtility]::HtmlEncode($activeBaseline))</strong></div>
 </div>
-<nav>
-    <a href="#summary" class="active">Summary</a>
-    <a href="#posture">Security Posture</a>
-    <a href="#licensing">Licensing</a>
-    <a href="#inventory">Policy Inventory</a>
-    <a href="#gap-analysis">Gap Analysis</a>
-    <a href="#recommendations">Recommendations</a>
-    $msTemplatesNav
-    <a href="#visualizer">Visualizer</a>
-</nav>
 <div class="container">
 $sec1
 $sec6
@@ -1726,6 +1752,7 @@ $secViz
 </div>
 <div class="footer">
     CA-BaselineAuditor v1.0.0 &mdash; Baseline: Kenneth van Surksum October 2025 &mdash; Generated with PowerShell $($PSVersionTable.PSVersion)
+</div>
 </div>
 <script>$js</script>
 </body>
